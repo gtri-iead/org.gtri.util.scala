@@ -1,0 +1,105 @@
+If boxB is recoverable and flatMap is called, there is no guarantee that f will return an A
+
+a simple RecoverBox can promise that it can recover
+but a nested RecoverBox cannot
+
+*A serial nested RecoverBox must be able to fail*
+
+Composition of multiple boxes at the same time doesn't suffer this issue as a failure can be
+detected immediately
+
+The problem is when the computation is serial - it can't be known if it is going to fail ahead of time
+
+Previously I was using box to encapsulate this possibility - could I just continue to use
+box and force recover on all boxes? This leads to the same issue with needing an infinite recursion
+to force recover all nested RecoverBoxes
+
+
+Does passing a lazy val as a parameter to a function cause it to be eval'd?
+
+
+object A {
+  def foo[A](value: => Option[A]) { println("never eval it") }
+}
+
+
+
+
+
+val b1 = 1.box
+val b2 = Box(issue2, 2)
+val b4 = Box.empty(issue4)
+val b6 = Box(issue6, "asdf")
+val b10 = Box.recover(issue10, { println("here"); Box(issue11, "qwerty") })
+
+
+type Box[+A] = Try2[LogWriter[Option[A]]]
+// #1 If the logs are "inside" the box then logs are never combined correctly when we have a recoverable:
+for(logA <- b10; logB <- b2) yield for(oa <- logA; ob <- logB) yield for(a <- oa; b <- ob) yield a+b
+res2: org.gtri.util.iteratee.impl.box.Try2[scalaz.WriterT[scalaz.Id.Id,List[org.gtri.util.iteratee.api.Issue],Option[String]]] = Recover(org.gtri.util.iteratee.box.Lazy@1df67)
+// Maybe this is where cram should be used instead?
+type Box[+A] = Try3[LogWriter[A]] // Same here, though also for empty
+
+// ?
+type Box[+A] = Either[Lazy[OptLogWriter[A]]], OptLogWriter[A]]
+for((a,b) <- (bA,bB).cram) yield a+b
+
+type Box[+A] = LogWriter[Try2[Option[A]]]
+type Box[+A] = LogWriter[Try3[A]]
+type Box[+A] = LogWriter[Either[Lazy[Option[A]],Option[A]]]
+// #2 If the logs are "outside" the box then no log is returned when recovering:
+b10.value.recover
+res0: org.gtri.util.iteratee.impl.box.Try2[Option[String]] = Go(Some(qwerty))
+
+// ?
+type Box[+A] = LogWriter[Either[Lazy[OptLogWriter[A]],Option[A]]]
+for(eA <- bA;eB <- bB) yield for((oa,ob) <- (eA,eB).cram) yield for(a <- oa; b <- ob) yield a+b
+
+type Box[+A] = RecoverOptionWriter[A]
+// #3 If the logs and option are combined into a specialized class, logs are not combined when empty:
+for(a <- b6;b <- b1) yield a+b
+// Though this works well for recover
+for(a <- b10; b <- b1) yield a+b
+
+// #4 Changing RecoverOptionWriter to flatMap/Map on Option[A] instead of A fixes logs not combining when empty:
+for(oa <- b1; ob <- b4; oc <- b2) yield for(a <- oa; b <- ob; c <- oc) yield a+b+c
+res3: org.gtri.util.iteratee.box.RecoverOptionWriter[List[org.gtri.util.iteratee.api.Issue],Int] = NoGo(List(Tue Dec 25 14:04:16 EST 2012 INFO: asdf4, Tue Dec 25 14:04:16 EST 2012 INFO: asdf2))
+
+// #5 Recovering again prevents logs from being combined at same time:
+for(oa <- b10; ob <- b2; oc <- b4) yield for(a <- oa; b <- ob; c <- oc) yield a+b+c
+res4: org.gtri.util.iteratee.box.RecoverOptionWriter[List[org.gtri.util.iteratee.api.Issue],String] = Recover(List(Tue Dec 25 14:22:04 EST 2012 INFO: asdf10),org.gtri.util.iteratee.box.Lazy@d92032)
+// Logs from b2 and b4 are ignored initially, but show up in recover:
+res4.recover
+res5: org.gtri.util.iteratee.box.RecoverOptionWriter[List[org.gtri.util.iteratee.api.Issue],String] = NoGo(List(Tue Dec 25 14:22:04 EST 2012 INFO: asdf2, Tue Dec 25 14:22:05 EST 2012 INFO: asdf4, Tue Dec 25 14:22:04 EST 2012 INFO: asdf11))
+// Logs are here now
+// This still isn't quite the same as "cram"
+// Cram: 1) ensures logs are always combined 2) if any empty returns empty with all logs 3) if any recover, recovers all boxes, returns all logs 4) if all full returns full with all logs
+
+for((a,b,c) <- tuple(b1,b10,b1)) yield a+b+c
+
+
+
+#1 - Every "box" has a log implies LogWriter must be on the "outside"
+#2 - This also means that a for-comprehension (that will never exit early) can be used to combine logs:
+for(logA <- boxA;logB <- boxB) yield ...
+#3 - cram must work with what is inside the LogWriter, an "inner box"
+
+
+type Recoverable[+A] = Lazy[LogWriter[Option[A]]]
+type InnerBox[+A] = Either[Recoverable[A], Option[A]]
+type Box[+A] = LogWriter[Either[Lazy[LogWriter[Option[A]]], Option[A]]]
+
+for(innerA <- boxA;innerB <- boxB) yield for((a,b) <- (bA,bB).cram) yield a+b
+
+implicit class CramOps2[A,B](self: (InnerBox[A],InnerBox[B])) {
+    def cram: InnerBox[(A,B)] = {
+      if(self._1.isLeft || self._2.isLeft) {
+        Left(Lazy({ (self._1.recover,self._2.recover).cram })
+      } else {
+        if(self._1.right.isEmpty || self._2.isEmpty) {
+          Right(None)
+      } else {
+        Right(Some((self._1.right.get,self.right._2.get)))
+      }
+    }
+  }
