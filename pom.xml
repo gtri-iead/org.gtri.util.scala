@@ -13,7 +13,7 @@
   </parent>
     
     <modules>
-        <module>debuglog</module>
+        <module>exelog</module>
         <module>box</module>
     </modules>
 </project>
