@@ -65,9 +65,9 @@ final class Recover[M[+_], +A](__recoverable : => M[Option[A]]) extends OptRecov
 
 object Recover {
   def apply[M[+_],A](recoverable: => M[Option[A]]) : Recover[M,A] = new Recover[M,A](recoverable)
-  def unapply[M[+_],A](box : OptRecoverM[M,A]) : Option[() => M[Option[A]]] = {
-    if(box.isRecover) {
-      Some({ () => box.recoverable })
+  def unapply[M[+_],A](optrecover : OptRecoverM[M,A]) : Option[() => M[Option[A]]] = {
+    if(optrecover.isRecover) {
+      Some({ () => optrecover.recoverable })
     } else {
       None
     }
@@ -134,8 +134,8 @@ sealed trait OptRecoverM[M[+_],+A] {
 //      ifGo = { a => OptRecoverM(f(a)) }
 //    )
 
-  def ap[B](fbox: => OptRecoverM[M, (A) => B])(implicit M0: Monad[M]) : OptRecoverM[M,B] =
-    for(f <- fbox;a <- this) yield f(a)
+  def ap[B](foptrecover: => OptRecoverM[M, (A) => B])(implicit M0: Monad[M]) : OptRecoverM[M,B] =
+    for(f <- foptrecover;a <- this) yield f(a)
   
   def foreach[U](f: A => U) : Unit = fold(
     ifNoGo = { () },
@@ -193,37 +193,37 @@ trait OptRecoverMTypeClassImplicits {
 
 }
 
-private[box] trait OptRecoverMFunctor[M[+_]] extends Functor[({type λ[+α]=OptRecoverM[M, α]})#λ] {
+private[optrecover] trait OptRecoverMFunctor[M[+_]] extends Functor[({type λ[+α]=OptRecoverM[M, α]})#λ] {
   implicit def M: Monad[M]
 
   override def map[A, B](fa: OptRecoverM[M, A])(f: (A) => B) = fa map f
 }
 
-private[box] trait OptRecoverMApply[M[+_]] extends Apply[({type λ[+α]=OptRecoverM[M, α]})#λ] with OptRecoverMFunctor[M] {
+private[optrecover] trait OptRecoverMApply[M[+_]] extends Apply[({type λ[+α]=OptRecoverM[M, α]})#λ] with OptRecoverMFunctor[M] {
   implicit def M: Monad[M]
 
   override def ap[A, B](fa: => OptRecoverM[M, A])(f: => OptRecoverM[M, (A) => B]) = fa ap f
 }
 
-private[box] trait OptRecoverMApplicative[M[+_]] extends Applicative[({type λ[+α]=OptRecoverM[M, α]})#λ] with OptRecoverMApply[M] {
+private[optrecover] trait OptRecoverMApplicative[M[+_]] extends Applicative[({type λ[+α]=OptRecoverM[M, α]})#λ] with OptRecoverMApply[M] {
   implicit def M: Monad[M]
   
   def point[A](a: => A) = OptRecoverM(a)
 }
 
-private[box] trait OptRecoverMEach[M[+_]] extends Each[({type λ[+α]=OptRecoverM[M, α]})#λ] {
+private[optrecover] trait OptRecoverMEach[M[+_]] extends Each[({type λ[+α]=OptRecoverM[M, α]})#λ] {
   implicit def M: Monad[M]
 
   def each[A](fa: OptRecoverM[M, A])(f: (A) => Unit) = fa foreach f
 }
 
-private[box] trait OptRecoverMMonad[M[+_]] extends Monad[({type λ[α] = OptRecoverM[M,α]})#λ] with OptRecoverMApplicative[M] {
+private[optrecover] trait OptRecoverMMonad[M[+_]] extends Monad[({type λ[α] = OptRecoverM[M,α]})#λ] with OptRecoverMApplicative[M] {
   implicit def M: Monad[M]
 
   def bind[A, B](fa: OptRecoverM[M,A])(f: (A) => OptRecoverM[M,B]): OptRecoverM[M,B] = fa flatMap f
 }
 
-private[box] trait OptRecoverMEqual[M[+_],A] extends Equal[OptRecoverM[M,A]]  {
+private[optrecover] trait OptRecoverMEqual[M[+_],A] extends Equal[OptRecoverM[M,A]]  {
   implicit def M: Monad[M]
 
   def equal(a1: OptRecoverM[M,A], a2: OptRecoverM[M,A]) = a1 == a2

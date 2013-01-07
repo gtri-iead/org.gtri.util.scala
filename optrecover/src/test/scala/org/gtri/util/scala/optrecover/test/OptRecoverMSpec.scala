@@ -23,7 +23,7 @@ package org.gtri.util.scala.optrecover.test
 
 import scala.language.higherKinds
 import org.scalatest.FunSpec
-import org.gtri.util.scala.box._
+import org.gtri.util.scala.optrecover._
 import scalaz._
 import Scalaz._
 
