@@ -74,6 +74,24 @@ trait ExeLog {
     }
   }
 
+  def error(message : => String) {
+    if(logger.isEnabledFor(Level.ERROR)) {
+      logger.log(qualifiedName, Level.ERROR, formatMessage(message), null)
+    }
+  }
+
+  def error(throwable : Throwable) {
+    if(logger.isEnabledFor(Level.ERROR)) {
+      logger.log(qualifiedName, Level.ERROR, throwable.getMessage, throwable)
+    }
+  }
+
+  def error(message : => String, throwable : Throwable) {
+    if(logger.isEnabledFor(Level.ERROR)) {
+      logger.log(qualifiedName, Level.ERROR, formatMessage(message), throwable)
+    }
+  }
+  
   def fatal(message : => String) {
     if(logger.isEnabledFor(Level.FATAL)) {
       logger.log(qualifiedName, Level.FATAL, formatMessage(message), null)
@@ -95,6 +113,26 @@ trait ExeLog {
 }
 
 object ExeLog {
+  def apply(_name : String, pkg: String) = new ExeLog {
+    def logger = Logger.getLogger(qualifiedName)
+
+    def qualifiedName = pkg + "." + name
+
+    def name = _name
+
+    def formatMessage(message: String) = message
+  }
+
+  def apply(a : Any) = new ExeLog {
+    def logger = Logger.getLogger(qualifiedName)
+
+    def qualifiedName = a.getClass.getCanonicalName
+
+    def name = a.getClass.getSimpleName
+
+    def formatMessage(message: String) = message
+  }
+
   def buildParameterString(parameters: Seq[(String,Any)]) : String = {
     val f : ((String,Any)) => String = {
       (tuple) =>

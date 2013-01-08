@@ -25,15 +25,15 @@ class A(s: String, f: Float) {
 
 
 class ExeLogTests extends FunSuite {
+  val rootLogger = Logger.getRootLogger();
+  rootLogger.setLevel(Level.INFO);
+  rootLogger.addAppender(new ConsoleAppender(
+    new PatternLayout("%-6r [%p] %c - %m%n")));
+
+  rootLogger.setLevel(Level.ALL)
 
 
   test("exelog") {
-    val rootLogger = Logger.getRootLogger();
-    rootLogger.setLevel(Level.INFO);
-    rootLogger.addAppender(new ConsoleAppender(
-      new PatternLayout("%-6r [%p] %c - %m%n")));
-
-    rootLogger.setLevel(Level.ALL)
     val a = new A("asdf",1.0f)
     a.foo("qwety",2)
   }
