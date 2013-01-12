@@ -22,6 +22,7 @@
 package org.gtri.util.scala
 
 import scala.language.higherKinds
+import scalaz.Monad
 
 
 /**
@@ -32,7 +33,12 @@ import scala.language.higherKinds
  * To change this template use File | Settings | File Templates.
  */
 package object optrecover {
-  type OptRecover[M[+_], A] = M[OptRecoverM[M,A]]
+  type OptRecover[M[+_], +A] = M[OptRecoverM[M,A]]
+  object OptRecover {
+    def empty[M[+_],A](implicit M: Monad[M]) : OptRecover[M,A] = M.point(OptRecoverM.empty)
+    def apply[M[+_],A](a : A)(implicit M : Monad[M]) : OptRecover[M,A] = M.point(OptRecoverM[M,A](a))
+    def recover[M[+_],A](recoverable: => M[Option[A]])(implicit M : Monad[M]) : OptRecover[M,A] = M.point(OptRecoverM.recover(recoverable))
+  }
 }
 
 

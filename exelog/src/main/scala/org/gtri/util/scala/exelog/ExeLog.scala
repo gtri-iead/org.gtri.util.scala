@@ -21,173 +21,61 @@
 */
 package org.gtri.util.scala.exelog
 
-import org.apache.log4j.{Level, Logger}
+import org.apache.log4j.Level
 import org.apache.log4j.Level._
 
-/**
- * Created with IntelliJ IDEA.
- * User: Lance
- * Date: 1/5/13
- * Time: 7:23 AM
- * To change this template use File | Settings | File Templates.
- */
 trait ExeLog {
-  def logger : Logger
   def qualifiedName : String
   def name : String
-
-  def formatMessage(message : String) : String
-  
-  def info(message: => String) {
-    if(logger.isEnabledFor(Level.INFO)) {
-      logger.log(qualifiedName, Level.INFO, formatMessage(message), null)
-    }
-  }
-
-  def debug(message : => String) {
-    if(logger.isEnabledFor(Level.DEBUG)) {
-      logger.log(qualifiedName, Level.DEBUG, formatMessage(message), null)
-    }
-  }
-
-  def trace(message : => String) {
-    if(logger.isEnabledFor(Level.TRACE)) {
-      logger.log(qualifiedName, Level.TRACE, formatMessage(message), null)
-    }
-  }
-
-  def warn(message : => String) {
-    if(logger.isEnabledFor(Level.WARN)) {
-      logger.log(qualifiedName, Level.WARN, formatMessage(message), null)
-    }
-  }
-
-  def warn(throwable : Throwable) {
-    if(logger.isEnabledFor(Level.WARN)) {
-      logger.log(qualifiedName, Level.WARN, throwable.getMessage, throwable)
-    }
-  }
-
-  def warn(message : => String, throwable : Throwable) {
-    if(logger.isEnabledFor(Level.WARN)) {
-      logger.log(qualifiedName, Level.WARN, formatMessage(message), throwable)
-    }
-  }
-
-  def error(message : => String) {
-    if(logger.isEnabledFor(Level.ERROR)) {
-      logger.log(qualifiedName, Level.ERROR, formatMessage(message), null)
-    }
-  }
-
-  def error(throwable : Throwable) {
-    if(logger.isEnabledFor(Level.ERROR)) {
-      logger.log(qualifiedName, Level.ERROR, throwable.getMessage, throwable)
-    }
-  }
-
-  def error(message : => String, throwable : Throwable) {
-    if(logger.isEnabledFor(Level.ERROR)) {
-      logger.log(qualifiedName, Level.ERROR, formatMessage(message), throwable)
-    }
-  }
-  
-  def fatal(message : => String) {
-    if(logger.isEnabledFor(Level.FATAL)) {
-      logger.log(qualifiedName, Level.FATAL, formatMessage(message), null)
-    }
-  }
-
-  def fatal(throwable : Throwable) {
-    if(logger.isEnabledFor(Level.FATAL)) {
-      logger.log(qualifiedName, Level.FATAL, throwable.getMessage, throwable)
-    }
-  }
-
-  def fatal(message : => String, throwable : Throwable) {
-    if(logger.isEnabledFor(Level.FATAL)) {
-      logger.log(qualifiedName, Level.FATAL, formatMessage(message), throwable)
-    }
-  }
-
-}
-
-object ExeLog {
-  def apply(_name : String, pkg: String) = new ExeLog {
-    def logger = Logger.getLogger(qualifiedName)
-
-    def qualifiedName = pkg + "." + name
-
-    def name = _name
-
-    def formatMessage(message: String) = message
-  }
-
-  def apply(a : Any) = new ExeLog {
-    def logger = Logger.getLogger(qualifiedName)
-
-    def qualifiedName = a.getClass.getCanonicalName
-
-    def name = a.getClass.getSimpleName
-
-    def formatMessage(message: String) = message
-  }
-
-  def buildParameterString(parameters: Seq[(String,Any)]) : String = {
-    val f : ((String,Any)) => String = {
-      (tuple) =>
-        val (name,value) = tuple
-        val sval = value.toString
-        s"$name='$sval'"
-    }
-    val s : Seq[String] = parameters map f
-    s.mkString(",")
-  }
-}
-
-class ClassLog(a : Any) extends ExeLog {
-  val logger = Logger.getLogger(a.getClass)
-  def name : String = a.getClass.getSimpleName
-  def qualifiedName = a.getClass.getCanonicalName
   def formatMessage(message : String) : String = message
-}
-
-object ClassLog {
-
-  def apply(a : Any, parameters: (String, Any)*) : ClassLog = {
-    val log = new ClassLog(a)
-    val name = log.name
-    val sparameters = ExeLog.buildParameterString(parameters)
-    log.trace(s"$name($sparameters)")
-    log
+  
+  def isEnabledFor(level : Level) : Boolean
+  def log(fqcn : String, level : Level, message : => String, cause : Option[Throwable])
+  def tryLog(fqcn : String, level : Level, message : => String, cause : Option[Throwable]) {
+    if(isEnabledFor(level)) {
+      val msg = if(message != null) formatMessage(message) else ""
+      log(fqcn, level, msg, cause)
+    }
   }
 
-}
+  def info(message: => String) = tryLog(qualifiedName, INFO, message, None)
 
-class MethodLog(val name : String)(implicit classLog : ClassLog) extends ExeLog {
-  def logger = classLog.logger
-  lazy val qualifiedName =  classLog.qualifiedName + "." + name
+  def +=(message: => String) = debug(message)
+  def debug(message : => String) = tryLog(qualifiedName, DEBUG, message, None)
+  
+  def ~=(message: => String) = trace(message)
+  def trace(message : => String) = tryLog(qualifiedName, TRACE, message, None)
 
-  def formatMessage(message : String) : String = {
-    val className = classLog.name
-    s"$className.$name: $message"
+  def warn(message : => String) = tryLog(qualifiedName, WARN, message, None)
+  def warn(cause : Throwable) = tryLog(qualifiedName, WARN, cause.getMessage, Some(cause))
+  def warn(message : => String, cause : Throwable) = tryLog(qualifiedName, WARN, message, Some(cause))
+
+  def error(message : => String) = tryLog(qualifiedName, ERROR, message, None)
+  def error(cause : Throwable) = tryLog(qualifiedName, ERROR, cause.getMessage, Some(cause))
+  def error(message : => String, cause : Throwable) = tryLog(qualifiedName, ERROR, message, Some(cause))
+  
+  def fatal(message : => String) = tryLog(qualifiedName, FATAL, message, None)
+  def fatal(cause : Throwable) = tryLog(qualifiedName, FATAL, cause.getMessage, Some(cause))
+  def fatal(message : => String, cause : Throwable) = tryLog(qualifiedName, FATAL, message, Some(cause))
+
+  def formatArg(arg : Any) : String = {
+    if(arg == null) {
+      "!null"
+    } else
+      arg match {
+        // if a string, format with single-quotes and replace newlines with literal \n
+        // TODO: limit string length
+        case a : String => "'" + a.replaceAll("\n","""\\n""") + "'"
+        // TODO: for known containers (traversable) limit length
+        case a : Any => a.toString
+      }
   }
 
-  def exit[A](a : A) : A = {
-    val className = classLog.name
-    val s = a.toString
-    classLog.trace({ s"$className.$name => '$s'" })
-    a
-  }
-}
-
-object MethodLog {
-  def apply(name: String, parameters: (String,Any)*)(implicit classLog : ClassLog) : MethodLog = {
-    classLog.trace({
-      val className = classLog.name
-      val sparameters = ExeLog.buildParameterString(parameters)
-      s"$className.$name($sparameters)"
-    })
-    new MethodLog(name)
+  // format args (arg0=val0,arg1=val1,...)
+  def formatArgs(args: Seq[(String, Any)]) = {
+    "(" + (args map {
+      t =>
+        t._1 + "=" + formatArg(t._2)
+    } mkString ",") + ")"
   }
 }
