@@ -21,14 +21,32 @@
 */
 package org.gtri.util.scala.exelog
 
-import org.apache.log4j.Level
 
-abstract class MethodLog(_name : String)(implicit classLog : ClassLog) extends ExeLog {
-  val name = classLog.name + "." + _name
-  val qualifiedName = classLog.qualifiedName + "." + name
+object NoopLog extends Log {
 
-  override def formatMessage(message : String) : String = name + ": " + message
+  def name : String = ""
 
-  def exit[A](a : A)  = trace({ name + " => " + formatArg(a) })
+  def info(message: => String) { }
+
+  def debug(message: => String) { }
+
+  def trace(message: => String) { }
+
+  def warn(message: => String) { }
+
+  def warn(cause: Throwable) { }
+
+  def warn(message: => String, cause: Throwable) { }
+
+  def error(message: => String) { }
+
+  def error(cause: Throwable) { }
+
+  def error(message: => String, cause: Throwable) { }
+
+  def fatal(message: => String) { }
+
+  def fatal(cause: Throwable) { }
+
+  def fatal(message: => String, cause: Throwable) { }
 }
-

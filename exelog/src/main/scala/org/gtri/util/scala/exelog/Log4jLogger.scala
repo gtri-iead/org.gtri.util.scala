@@ -19,32 +19,20 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog.nosideeffects
+package org.gtri.util.scala.exelog
 
-import org.apache.log4j.{Level, Logger}
+import org.apache.log4j
 import org.gtri.util.scala.exelog
-import exelog.ExeLog
 
 /**
  * Created with IntelliJ IDEA.
  * User: Lance
- * Date: 1/8/13
- * Time: 5:53 PM
+ * Date: 1/13/13
+ * Time: 6:26 AM
  * To change this template use File | Settings | File Templates.
  */
-class ClassLog(val name : String, val qualifiedName : String) extends exelog.ClassLog {
-  private var _entries : List[LogEntry] = Nil
-  def entries = _entries
+class Log4jLogger extends exelog.Logger {
+  def getLog(c: Class[_]) = Log4jLog(c.getSimpleName, c.getPackage.getName)
 
-  def isEnabledFor(level: Level) = true
-
-  def log(fqcn: String, level: Level, message: => String, cause: Option[Throwable]) = {
-    _entries ::= LogEntry(fqcn,level,message,cause)
-  }
-}
-
-object ClassLog {
-  def apply(c: Class[_ <: AnyRef]) : ClassLog = apply(c.getSimpleName, c.getCanonicalName)
-  def apply(name : String) : ClassLog = apply(name,name)
-  def apply(name : String, qualifiedName : String) : ClassLog = new ClassLog(name, qualifiedName)
+  def getLog(name: String, parentName : String) = Log4jLog(name, parentName)
 }
