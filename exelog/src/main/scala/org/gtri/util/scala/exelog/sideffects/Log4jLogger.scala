@@ -19,34 +19,10 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog
+package org.gtri.util.scala.exelog.sideffects
 
+final class Log4jLogger {
+  @inline def getLog(c: Class[_]) = new Log4jLog(c.getSimpleName, c.getPackage.getName)
 
-object NoopLog extends Log {
-
-  def name : String = ""
-
-  def info(message: => String) { }
-
-  def debug(message: => String) { }
-
-  def trace(message: => String) { }
-
-  def warn(message: => String) { }
-
-  def warn(cause: Throwable) { }
-
-  def warn(message: => String, cause: Throwable) { }
-
-  def error(message: => String) { }
-
-  def error(cause: Throwable) { }
-
-  def error(message: => String, cause: Throwable) { }
-
-  def fatal(message: => String) { }
-
-  def fatal(cause: Throwable) { }
-
-  def fatal(message: => String, cause: Throwable) { }
+  @inline def getLog(name: String, parentName : String) = new Log4jLog(name, parentName)
 }

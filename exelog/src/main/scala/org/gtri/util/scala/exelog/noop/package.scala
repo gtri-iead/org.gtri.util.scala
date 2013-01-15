@@ -21,18 +21,28 @@
 */
 package org.gtri.util.scala.exelog
 
-import org.gtri.util.scala.exelog
+package object noop {
+  type Logger = NoopLogger
+  type Log = NoopLog
+  implicit val logger = new Logger
 
-/**
- * Created with IntelliJ IDEA.
- * User: Lance
- * Date: 1/13/13
- * Time: 6:26 AM
- * To change this template use File | Settings | File Templates.
- */
-object NoopLogger extends exelog.Logger {
-  def getLog(c: Class[_]) = NoopLog
+  implicit class logMethods(self: Log)(implicit c : Class[_]) {
+    @inline def block[A](methodName: String)(f: => A) : A = f
+    @inline def block[A](methodName: String, args : => Seq[(String,Any)])(f: => A) : A = f
 
-  def getLog(parentName : String, name: String) = NoopLog
+
+    @inline def begin(methodName : String) : Unit = { } //noop
+    @inline def begin(methodName : String, args: => Seq[(String,Any)]) { } //noop
+
+
+    @inline def end(methodName : String) : Unit = { } //noop
+    @inline def end[A](methodName : String, retv : A) { } //noop
+
+  }
+
+  implicit class logMe(message : => String) {
+    @inline def unary_~(implicit log : Log) = { } //noop
+    @inline def unary_+(implicit log : Log) = { } //noop
+  }
 
 }

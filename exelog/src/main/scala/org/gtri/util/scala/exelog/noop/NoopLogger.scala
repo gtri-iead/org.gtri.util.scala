@@ -19,20 +19,16 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog
+package org.gtri.util.scala.exelog.noop
 
-import org.apache.log4j
-import org.gtri.util.scala.exelog
+object NoopLogger {
+  private val log = new NoopLog
+}
+final class NoopLogger {
+  import NoopLogger._
 
-/**
- * Created with IntelliJ IDEA.
- * User: Lance
- * Date: 1/13/13
- * Time: 6:26 AM
- * To change this template use File | Settings | File Templates.
- */
-class Log4jLogger extends exelog.Logger {
-  def getLog(c: Class[_]) = Log4jLog(c.getSimpleName, c.getPackage.getName)
+  @inline def getLog(c: Class[_]) = log
 
-  def getLog(name: String, parentName : String) = Log4jLog(name, parentName)
+  @inline def getLog(parentName : String, name: String) = log
+
 }
