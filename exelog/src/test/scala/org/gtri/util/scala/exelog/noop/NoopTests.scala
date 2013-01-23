@@ -6,7 +6,7 @@ import org.gtri.util.scala.exelog._
 
 object B {
   implicit val thisclass = classOf[B]
-  implicit val log = implicitly[Logger].getLog(thisclass)
+  implicit val log = Logger.getLog(thisclass)
 
   def apply(s : String, f : Float) : B ={
     log.block("apply") {

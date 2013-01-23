@@ -22,11 +22,10 @@
 package org.gtri.util.scala.exelog
 
 package object noop {
-  type Logger = NoopLogger
   type Log = NoopLog
-  implicit val logger = new Logger
+  implicit val Logger = new NoopLogger
 
-  implicit class logMethods(self: Log)(implicit c : Class[_]) {
+  implicit class logMethods(self: Log)(implicit c : Class[_ <: AnyRef]) {
     @inline def block[A](methodName: String)(f: => A) : A = f
     @inline def block[A](methodName: String, args : => Seq[(String,Any)])(f: => A) : A = f
 

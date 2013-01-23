@@ -1,29 +1,29 @@
 package org.gtri.util.scala.exelog.sideeffects
 
 import org.scalatest.FunSuite
-import org.gtri.util.scala.exelog.sideffects._
+import org.gtri.util.scala.exelog.sideeffects._
 import org.gtri.util.scala.exelog._
 import org.apache.log4j
 
 object A {
-  implicit val thisclass = classOf[A]
-  implicit val log = implicitly[Logger].getLog(thisclass)
-  
-  def apply(s : String, f : Float) : A ={
+  implicit val thisclass = classOf[A[_]]
+  implicit val log = Logger.getLog(thisclass)
+
+  def apply[T](s : String, f : T) : A[T] ={
     log.block("apply") {
       new A(s,f)
     }
 
   }
 }
-class A(s : String, f: Float) {
+class A[T](s : String, f: T) {
   import A._
-  def foo(s : String, f : Float) : Int = {
+  def foo(s : String, f : T) : Int = {
     log.block("foo", Seq("s" -> s, "f" -> f)) {
       1
     }
   }
-  def foo2(s : String, f : Float) : Int = {
+  def foo2(s : String, f : T) : Int = {
     log.begin("foo2", Seq("s" -> s, "f" -> f))
     log trace "asdf"
     log debug "asdf"
@@ -50,8 +50,8 @@ class SideEffectsTests extends FunSuite {
 
   rootLogger.setLevel(log4j.Level.ALL)
   test("SideEffectsTests") {
-    val a = A("asdf",1.0f)
-    a.foo("qwety\nasdf",2)
-    a.foo2("qwety\nasdf",2)
+    val a = A[Float]("asdf",1.0f)
+    a.foo("qwety\nasdf",2.0f)
+    a.foo2("qwety\nasdf",2.0f)
   }
 }

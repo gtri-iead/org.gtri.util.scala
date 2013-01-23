@@ -19,16 +19,10 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog.noop
+package org.gtri.util.scala.exelog.sideeffects
 
-object NoopLogger {
-  private val log = new NoopLog
-}
-final class NoopLogger {
-  import NoopLogger._
+final class Log4jLogger {
+  @inline def getLog(c: Class[_ <: AnyRef]) = new Log4jLog(c.getSimpleName, c.getPackage.getName)
 
-  @inline def getLog(c: Class[_ <: AnyRef]) = log
-
-  @inline def getLog(parentName : String, name: String) = log
-
+  @inline def getLog(name: String, parentName : String) = new Log4jLog(name, parentName)
 }
