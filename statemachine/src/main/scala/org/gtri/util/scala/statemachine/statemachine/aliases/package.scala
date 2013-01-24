@@ -19,33 +19,36 @@
     along with org.gtri.util.iteratee library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.statemachine.enumerator
+package org.gtri.util.scala.statemachine.statemachine
 
-import org.gtri.util.scala.statemachine.EndOfInput
+import org.gtri.util.scala.statemachine._
 
 package object aliases {
-
-  /*
+    /*
+    ∑ => input alphabet
     Γ => output alphabet
     S => set of states
     s0 => initial state (s0 ∈ S)
-    ∂ => transition function
+    ∂ => continuation state & transition function object
     F => set of final states (F ⊂ S)
-  */
-  type  S  [Γ]   =   State                [Γ]
-  type  F  [Γ]   =   State.Done           [Γ]
-  type  ∂  [Γ]   =   State.Continue       [Γ]
+    A => final success value type
+    ∅ => 1) the type of the empty set 2) instance of the empty set
+    b => instance of empty input
+    EOI => 1) type of end of input 2) instance of end of input
+     */
+    type  S  [∑,Γ,A]   =   State                [∑,Γ,A]
+    type  F  [∑,Γ,A]   =   State.Done           [∑,Γ,A]
+    type  ∂  [∑,Γ,A]   =   State.Continue       [∑,Γ,A]
 
-  type  EOI      =   EndOfInput
-  val   EOI      =   EndOfInput
+    type  EOI          =   EndOfInput
+    val   EOI          =   EndOfInput
 
-  type  ∅        =   Unit
-  val   ∅        =   Unit
+    type  ∅           =   Unit
+    val   ∅           =   Unit
 
-  type  ⊳  [Γ]   =   Continue             [Γ]
-  val   ⊳        =   Continue
-  type  ⊡  [Γ]   =   Success              [Γ]
-  val   ⊡        =   Success
-  type  ⊠  [Γ]   =   Failure              [Γ]
-  val   ⊠        =   Failure
+    type  ⊳  [∑,Γ,A]   =   Continue             [∑,Γ,A]
+    type  ⊡  [∑,Γ,A]   =   Success              [∑,Γ,A]
+    val   ⊡            =   Success
+    type  ⊠  [∑,Γ,A]   =   Failure              [∑,Γ,A]
+    val   ⊠            =   Failure
 }

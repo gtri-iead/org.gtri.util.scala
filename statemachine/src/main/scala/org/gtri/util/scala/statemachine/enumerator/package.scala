@@ -21,62 +21,50 @@
 */
 package org.gtri.util.scala.statemachine
 
-import org.gtri.util.scala.statemachine.{
-  Transitor => SM_Transitor,
-  State => SM_State, 
-  Done => SM_Done, 
-  Continue => SM_Continue, 
-  Success => SM_Success, 
-  Failure => SM_Failure,
-  EndOfInput => SM_EndOfInput
-}
-
 package object enumerator {
-  type Enumerator[O] = StateMachine[Unit,O,Unit]
 
-  trait Transitor[O] extends SM_Transitor[  Unit, O, Unit] {
-    def apply( in: Unit ) : State[O] = step()
-    def step()            : State[O]
-  }
+//  trait TransitionFunction[O] extends statemachine.TransitionFunction[Unit, O, Unit] {
+//    def apply( in: Unit ) : Result[O] = step()
+//    def step()            : Result[O]
+//  }
 
-
-  type State    [O]   = SM_State    [Unit, O, Unit]
-  type Done     [O]   = SM_Done     [Unit, O, Unit]
-  type Continue [O]   = SM_Continue [Unit, O, Unit]
-  type Success  [O]   = SM_Success  [Unit, O, Unit]
-  type Failure  [O]   = SM_Failure  [Unit, O, Unit]
-
-  type  EndOfInput      =   SM_EndOfInput
-  val   EndOfInput      =   SM_EndOfInput
-
-  val Continue        = SM_Continue
-
+  type Result   [O]   = statemachine.Result           [Unit, O, Unit]
+  type Done     [O]   = statemachine.Done             [Unit, O, Unit]
+  type Continue [O]   = statemachine.Continue         [Unit, O, Unit]
+  type Success  [O]   = statemachine.Success          [Unit, O, Unit]
+  type Failure  [O]   = statemachine.Failure          [Unit, O, Unit]
+  val Continue        = statemachine.Continue
   object Success {
-    def apply[O](output : Seq[O] = Seq.empty) : Success[O] = new Success(
-      value     = (),
-      output    = output,
-      overflow  = Seq.empty
-    )
-    def unapply[O](state : State[O]) : Option[Success[O]] = {
-      state.fold(
-        ifContinue  = { q => None },
-        ifSuccess = { q => Some(q) },
-        ifFailure = { q => None }
-      )
-    }
+    def apply[O](
+      state       :   State.Success[O],
+      output      :   Seq[O]                        =   Seq.empty
+    ) : Success[O] = Success(state, output)
+    def apply[O](
+      output      :   Seq[O]                        =   Seq.empty
+    ) : Success[O] = Success(State.Success(()), output)
   }
   object Failure {
-    def apply[O](output : Seq[O] = Seq.empty, optRecover : Option[() => State[O]] = None) : Failure[O] = new Failure(
-      output    = output,
-      overflow  = Seq.empty,
-      optRecover = optRecover
-    )
-    def unapply[O](state : State[O]) : Option[Failure[O]] = {
-      state.fold(
-        ifContinue  = { q => None },
-        ifSuccess = { q => None },
-        ifFailure = { q => Some(q) }
-      )
+    def apply[O](
+      state       :   State.Failure[O],
+      output      :   Seq[O]                        =   Seq.empty,
+      optRecover  :   Option[() => Result[O]]       =   None
+    ) : Failure[O] = new Failure(state, output, Seq.empty, optRecover)
+    def apply[O](
+      output      :   Seq[O]                        =   Seq.empty
+    ) : Failure[O] = new Failure(new State.Failure, output)
+  }
+
+  type State      [O]   = statemachine.State            [Unit, O, Unit]
+  object State {
+    type Done     [O]   = statemachine.State.Done       [Unit, O, Unit]
+    trait Continue[O] extends statemachine.State.Continue[Unit, O, Unit] {
+      def apply( in: Unit ) : Result[O] = step()
+      def step()            : Result[O]
     }
+    type Success  [O]   = statemachine.State.Success    [Unit, O, Unit]
+    type Failure  [O]   = statemachine.State.Failure    [Unit, O, Unit]
+//    val Continue        = statemachine.State.Continue
+    val Success         = statemachine.State.Success
+    val Failure         = statemachine.State.Failure
   }
 }

@@ -21,8 +21,20 @@
 */
 package org.gtri.util.scala
 
+import org.gtri.util.scala.statemachine.statemachine._
+
 package object statemachine {
   val STD_CHUNK_SIZE = 256
 
+  type Enumerator[O] = StateMachine[Unit,O,Unit]
+  type Iteratee[I,A] = StateMachine[I,Unit,A]
+  type Translator[I,O] = StateMachine[I,O,Unit]
 
+//  implicit def stateToResult[I,O,A](state : State[I,O,A]) : Result[I,O,A] = {
+//    state.fold(
+//      ifContinue = { q => Continue(q) },
+//      ifSuccess = { q => Success(q) },
+//      ifFailure = { q => Failure(q) }
+//    )
+//  }
 }

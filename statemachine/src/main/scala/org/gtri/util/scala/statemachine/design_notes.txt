@@ -47,7 +47,7 @@ Currently, this distinction is ignored. This leads to difficulty using the class
 Jan 23
 
 #1: Should State store a "state" variable? Currently, the TransitionFunction is the "state" variable which is weird.
-#1a: For now, renamed TransitionFunction to Transitor to take into account that it is really a combination of State & TransitionFunction
+#1a: For now, renamed TransitionFunction to Transitor to take into account that it is really the combination of State(Continue) & TransitionFunction
 
 #2: Should O be a Monoid instead of Seq[O] or should Seq[O] be M[O] where M is a Monad, to allow for composing monads, e.g. Writer[E,O]
 #2a: Would not apply to I or overflow I. I could still be a composed monad such as LogWriter[I].
@@ -55,6 +55,23 @@ Jan 23
 
 #3: What are the requirements for accumulating "metadata" or "issues" during SM processing?
 #3a: When composing or folding two states, must be able to accumulate the metadata/issues from both
-#3aa: If M[O] was used instead of Seq[O] (say M = Writer[List(Issue),Seq[O]]) then Monoid accumulation can be used
+#3aa: If M[O] was used instead of Seq[O] (say M = Writer[List(Issue),Seq[O]]) then Monoid accumulation can be used for folding
 #3ab: When composing how would the M[O] of m0 connect to the input of m1?
 #3aba: Hopefully by mapping the output out of the monad?
+#3abaa: Would this work when the return type of applying input is a State? You would get back M[State[I,O,A]] which doesn't make sense
+
+#4: Should there be a Result trait that contains the output & overflow?
+#4a: output & overflow are not really part of state
+
+Jan 24
+
+#1: Moving value from Result.Success to State.Success. This is required to convert a given state to a result.
+
+#2: Should optRecover be moved from Result.Success to State.Success?
+
+#3: Should StateMachine include a type for the set of possible states? StateMachine[I,O,A] => StateMachine[∑,Γ,S,F <: S]
+#3a: This is more aligned to the mathematical model, but how would Continue/Success/Failure work? How could a value be
+extracted from a final state? How would you compose machines? How would you fold results?
+#3ab: trait State[S,F <: S] { def fold[X](isS: S => X, isF: F => X) : X } StateMachine[∑,Γ,S <: State[S,F],F <: S]
+
+

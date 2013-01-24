@@ -21,6 +21,8 @@
 */
 package org.gtri.util.scala.statemachine.translator
 
+import org.gtri.util.scala.statemachine.EndOfInput
+
 package object aliases {
   /*
   ∑ => input alphabet
@@ -32,8 +34,8 @@ package object aliases {
   ∅ => 1) the type of the empty set 2) instance of the empty set
    */
   type  S  [∑,Γ]   =   State                [∑,Γ]
-  type  F  [∑,Γ]   =   Done                 [∑,Γ]
-  type  ∂  [∑,Γ]   =   Transitor            [∑,Γ]
+  type  F  [∑,Γ]   =   State.Done           [∑,Γ]
+  type  ∂  [∑,Γ]   =   State.Continue       [∑,Γ]
 
   type  EOI        =   EndOfInput
   val   EOI        =   EndOfInput

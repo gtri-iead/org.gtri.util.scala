@@ -33,7 +33,7 @@ class TraversableEnumerator[A](
 
   case class ∂∂(current : Traversable[A]) extends ∂[A] {
 
-    def step() : S[A] = {
+    def step() : Result[A] = {
       val (nextChunk, remaining) = current.splitAt(chunkSize)
       if(remaining.isEmpty) {
         ⊡(nextChunk.toSeq)
@@ -41,8 +41,30 @@ class TraversableEnumerator[A](
         ⊳(∂∂(remaining), nextChunk.toSeq)
       }
     }
-    def apply(x : EOI) = ⊡()
+    def apply(x : EndOfInput) = ⊡()
   }
 
-  def s0 = ⊳(∂∂(t))
+  def s0 = ∂∂(t)
 }
+
+//class TraversableEnumerator[A](
+//  t         :     Traversable[A],
+//  chunkSize :     Int               =   STD_CHUNK_SIZE
+//) extends Enumerator[A] {
+//  require(chunkSize > 0)
+//
+//  case class Cont(current : Traversable[A]) extends State.Continue[A] {
+//
+//    def step() : Result[A] = {
+//      val (nextChunk, remaining) = current.splitAt(chunkSize)
+//      if(remaining.isEmpty) {
+//        Success(nextChunk.toSeq)
+//      } else {
+//        Continue(Cont(remaining), nextChunk.toSeq)
+//      }
+//    }
+//    def apply(x : EndOfInput) = Success()
+//  }
+//
+//  def s0 = Cont(t)
+//}

@@ -21,8 +21,8 @@
 */
 package org.gtri.util.scala.statemachine
 
-trait StateMachine[I,O,A] {
-  import statemachine._
+import statemachine._
 
+trait StateMachine[I,O,A] {
   def s0 : State[I,O,A]
 }

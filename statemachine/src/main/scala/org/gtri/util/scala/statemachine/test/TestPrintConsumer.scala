@@ -19,34 +19,26 @@
     along with org.gtri.util.iteratee library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.statemachine.iteratee
 
+package org.gtri.util.scala.statemachine.test
+
+import org.gtri.util.scala.statemachine.iteratee._
 import org.gtri.util.scala.statemachine.EndOfInput
 
-package object aliases {
-  /*
-  ∑ => input alphabet
-  S => set of states
-  s0 => initial state (s0 ∈ S)
-  ∂ => transition function
-  F => set of final states (F ⊂ S)
-  A => final success value type
-  ∅ => 1) the type of the empty set 2) instance of the empty set
-   */
-  type  S  [∑,A]   =   State                [∑,A]
-  type  F  [∑,A]   =   State.Done           [∑,A]
-  type  ∂  [∑,A]   =   State.Continue       [∑,A]
+class TestPrintConsumer[A] extends Iteratee[A, Unit] {
+  case class Cont[A]() extends State.Continue[A, Unit] {
+    def apply(item : A) = apply(List(item))
 
-  type  EOI        =   EndOfInput
-  val   EOI        =   EndOfInput
+    def apply(items: List[A]) = {
+      println("received=" + items)
+      for (item <- items) {
+        println(item)
+      }
+      Continue(this)
+    }
 
-  type  ∅          =   Unit
-  val   ∅          =   Unit
+    def apply(eoi : EndOfInput) = Success(())
+  }
 
-  type  ⊳  [∑,A]   =   Continue             [∑,A]
-  val   ⊳          =   Continue
-  type  ⊡  [∑,A]   =   Success              [∑,A]
-  val   ⊡          =   Success
-  type  ⊠  [∑,A]   =   Failure              [∑,A]
-  val   ⊠          =   Failure
+  def s0 = Cont()
 }
