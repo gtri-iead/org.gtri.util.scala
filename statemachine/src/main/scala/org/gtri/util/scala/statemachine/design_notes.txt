@@ -74,4 +74,10 @@ Jan 24
 extracted from a final state? How would you compose machines? How would you fold results?
 #3ab: trait State[S,F <: S] { def fold[X](isS: S => X, isF: F => X) : X } StateMachine[∑,Γ,S <: State[S,F],F <: S]
 
+#4: Added metadata: List[Any] to Result for accumulating metadata
+
+Jan 27
+
+#1: SBT crashes with "bad symbolic reference" for Iteratee.State when Iteratee is an object. Changed Iteratee to a
+package with a package object and error went away.
 

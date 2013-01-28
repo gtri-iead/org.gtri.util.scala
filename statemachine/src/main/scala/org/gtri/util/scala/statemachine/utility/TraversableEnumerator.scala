@@ -22,19 +22,19 @@
 package org.gtri.util.scala.statemachine.utility
 
 import org.gtri.util.scala.statemachine._
-import org.gtri.util.scala.statemachine.enumerator._
-import org.gtri.util.scala.statemachine.enumerator.aliases._
 
-class TraversableEnumerator[A](
+case class TraversableEnumerator[A](
   t         :     Traversable[A],
   chunkSize :     Int               =   STD_CHUNK_SIZE
 ) extends Enumerator[A] {
+  import Enumerator._
   require(chunkSize > 0)
 
   case class ∂∂(current : Traversable[A]) extends ∂[A] {
 
-    def step() : Result[A] = {
+    def apply(x : Unit) : Result[A] = {
       val (nextChunk, remaining) = current.splitAt(chunkSize)
+//      println("nextChunk="+nextChunk)
       if(remaining.isEmpty) {
         ⊡(nextChunk.toSeq)
       } else {
@@ -53,7 +53,7 @@ class TraversableEnumerator[A](
 //) extends Enumerator[A] {
 //  require(chunkSize > 0)
 //
-//  case class Cont(current : Traversable[A]) extends State.Continue[A] {
+//  case class Cont(current : Traversable[A]) extends Continue[A] {
 //
 //    def step() : Result[A] = {
 //      val (nextChunk, remaining) = current.splitAt(chunkSize)

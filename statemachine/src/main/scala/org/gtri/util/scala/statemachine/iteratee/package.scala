@@ -1,68 +1,81 @@
-/*
-    Copyright 2012 Georgia Tech Research Institute
-
-    Author: lance.gatlin@gtri.gatech.edu
-
-    This file is part of org.gtri.util.iteratee library.
-
-    org.gtri.util.iteratee library is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    org.gtri.util.iteratee library is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with org.gtri.util.iteratee library. If not, see <http://www.gnu.org/licenses/>.
-
-*/
 package org.gtri.util.scala.statemachine
 
-package object iteratee {
-  type Iteratee[I,A] = StateMachine[I,Unit,A]
+package object Iteratee {
+  type Result[I,A]      = StateMachine.Result[I,Unit,A]
+  object Result {
+    def apply[I,A](
+      state     :   State[I,A],
+      overflow  :   Seq[I]                        = Seq.empty,
+      metadata  :   Seq[Any]                      = Seq.empty
+    ) = StateMachine.Result[I,Unit,A](
+      state     =   state,
+      output    =   Seq.empty,
+      overflow  =   overflow,
+      metadata  =   metadata
+    )
+  }
 
-//  type TransitionFunction [I,A]   =   statemachine.TransitionFunction [I, Unit, A]
-  type Result             [I,A]   =   statemachine.Result             [I, Unit, A]
-  type Done               [I,A]   =   statemachine.Done               [I, Unit, A]
-  type Continue           [I,A]   =   statemachine.Continue           [I, Unit, A]
-  type Success            [I,A]   =   statemachine.Success            [I, Unit, A]
-  type Failure            [I,A]   =   statemachine.Failure            [I, Unit, A]
+  type State[I,A]         = StateMachine.State[I,Unit,A]
+  object State {
+    type Done[I,A]        = StateMachine.State.Done[I,Unit,A]
 
-  val Continue        = statemachine.Continue
+    type Continue[I,A]    = StateMachine.State.Continue[I,Unit,A]
+
+    type Success[I,A]     = StateMachine.State.Success[I,Unit,A]
+    val Success           = StateMachine.State.Success
+
+    type Failure[I,A]     = StateMachine.State.Failure[I,Unit,A]
+    val Failure           = StateMachine.State.Failure
+  }
+
+  object Continue {
+    def apply[I,A](
+      state     :   State.Continue[I,A],
+      metadata  :   Seq[Any]                      = Seq.empty
+    ) = Result[I,A](
+      state     =   state,
+      metadata  =   metadata
+    )
+  }
+
   object Success {
     def apply[I,A](
-      state       :   State.Success[I,A],
-      value       :   A,
-      overflow    :   Seq[I] = Seq.empty
-    ) : Success[I,A] = new Success(state, Seq.empty, overflow)
-    def apply[I,A](
-      value       :   A,
-      overflow    :   Seq[I] = Seq.empty
-    ) : Success[I,A] = new Success[I,A](State.Success.apply(value), Seq.empty, overflow)
+      value : A,
+      overflow    :   Seq[I]                      = Seq.empty,
+      metadata    :   Seq[Any]                    = Seq.empty
+    ) = Result[I,A](
+      state     =   State.Success(value),
+      overflow  =   overflow,
+      metadata  =   metadata
+    )
   }
+
   object Failure {
     def apply[I,A](
-      state       :   State.Failure[I,A],
-      overflow    :   Seq[I] = Seq.empty,
-      optRecover  :   Option[() => Result[I,A]] = None
-    ) : Failure[I,A] = new Failure(state, Seq.empty, overflow, optRecover)
-    def apply[I,A](
-      overflow    :   Seq[I] = Seq.empty
-    ) : Failure[I,A] = new Failure(new State.Failure[I,A], Seq.empty, overflow)
+      optRecover  :   Option[() => Result[I,A]]   = None,
+      overflow    :   Seq[I]                      = Seq.empty,
+      metadata    :   Seq[Any]                    = Seq.empty
+    ) = Result[I,A](
+      state     =   State.Failure(optRecover),
+      overflow  =   overflow,
+      metadata  =   metadata
+    )
   }
 
-  type State      [I,A]   =   statemachine.State          [I, Unit, A]
-  object State {
-    type Done     [I,A]   = statemachine.State.Done       [I, Unit, A]
-    type Continue [I,A]   = statemachine.State.Continue   [I, Unit, A]
-    type Success  [I,A]   = statemachine.State.Success    [I, Unit, A]
-    type Failure  [I,A]   = statemachine.State.Failure    [I, Unit, A]
-//    val Continue          = statemachine.State.Continue
-    val Success           = statemachine.State.Success
-    val Failure           = statemachine.State.Failure
-  }
+    /*
+  ∑ => input alphabet
+  S => set of states
+  s0 => initial state (s0 ∈ S)
+  ∂ => transition function
+  F => set of final states (F ⊂ S)
+  A => final success value type
+  ∅ => 1) the type of the empty set 2) instance of the empty set
+   */
+  type  S  [∑,A]   =   State                      [∑,A]
+  type  F  [∑,A]   =   State.Done                 [∑,A]
+  type  ∂  [∑,A]   =   State.Continue             [∑,A]
 
+  val   ⊳          =   Continue
+  val   ⊡          =   Success
+  val   ⊠          =   Failure
 }
