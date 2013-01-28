@@ -24,17 +24,18 @@ package org.gtri.util.scala
 import org.gtri.util.scala.statemachine.StateMachine._
 
 package object statemachine {
-  type  EOI      =   EndOfInput
-  val   EOI      =   EndOfInput
-
-  type  ∅        =   Unit
-  val   ∅        =   Unit
-
   val STD_CHUNK_SIZE = 256
 
-  type Enumerator[O] = StateMachine[Unit,O,Unit]
-  type Iteratee[I,A] = StateMachine[I,Unit,A]
-  type Translator[I,O] = StateMachine[I,O,Unit]
+  type  EOI               =   EndOfInput
+  val   EOI               =   EndOfInput
+
+  type  ∅                 =   Unit
+  val   ∅                 =   Unit
+
+  type  Enumerator[O]     =   StateMachine[Unit,O,Unit]
+  type  Iteratee[I,A]     =   StateMachine[I,Unit,A]
+  type  Translator[I,O]   =   StateMachine[I,O,Unit]
+  type  Plan[A]           =   StateMachine[Unit,Unit,A]
 
   implicit class traversableToEnumerator[A](self: Traversable[A]) {
     def toEnumerator = utility.TraversableEnumerator(self, STD_CHUNK_SIZE)

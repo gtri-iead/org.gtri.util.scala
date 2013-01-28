@@ -3,20 +3,57 @@ package org.gtri.util.scala.statemachine
 import org.scalatest.FunSpec
 import org.gtri.util.scala.statemachine._
 import scala.util.Random
+import test.{TestIntToStringTranslator, TestSumIntIteratee}
 
 class EnumeratorTest extends FunSpec {
   val rnd = Stream.continually(Random.nextInt(100))
 
   describe("A Enumerator[O]") {
-    it("should be be constructable from any traversable") {
-      val e : Enumerator[Int] = rnd.toEnumerator
-    }
     it("should provide a single result chunk when stepped") {
       val n = STD_CHUNK_SIZE
       val l : List[Int] = rnd.take(n).toList
       val e : Enumerator[Int] = l.toEnumerator
       val result = e.s0.step()
       assert(result.output == l)
+    }
+    it("should contain all output in result after run") {
+      val n = STD_CHUNK_SIZE * 2
+      val l : List[Int] = rnd.take(n).toList
+      val e : Enumerator[Int] = l.toEnumerator
+      val state0 = e.s0
+      val result = state0.run()
+      assert(result.output == l)
+    }
+    it("should be able to be composed with an Iteratee to form a Plan") {
+      val n = STD_CHUNK_SIZE * 2
+      val l : List[Int] = rnd.take(n).toList
+      val sum = l.foldLeft(0) { _ + _ }
+      val e : Enumerator[Int] = l.toEnumerator
+      val i : Iteratee[Int,Int] = TestSumIntIteratee()
+      val ei : Plan[Int] = e compose i
+      val result = ei.run()
+      val opt = result.toOption
+      assert(opt.isDefined && opt.get == sum)
+    }
+    it("should be able to be composed with a Translator to form a Enumerator") {
+      val n = STD_CHUNK_SIZE * 2
+      val l : List[Int] = rnd.take(n).toList
+      val ls : List[String] = for(i <- l) yield i.toString
+      val e : Enumerator[Int] = l.toEnumerator
+      val t : Translator[Int,String] = TestIntToStringTranslator()
+      val ei : Enumerator[String] = e compose t
+      val result = ei.run()
+      assert(result.output == ls)
+    }
+  }
+}
+
+class TraversableEnumeratorTest extends FunSpec {
+  val rnd = Stream.continually(Random.nextInt(100))
+
+  describe("A TraversableEnumerator[O]") {
+    it("should be be constructable from any traversable") {
+      val e : Enumerator[Int] = rnd.toEnumerator
     }
     it("should end with the Success state once input is exhausted") {
       val n = STD_CHUNK_SIZE * 2
@@ -52,14 +89,6 @@ class EnumeratorTest extends FunSpec {
           ifFailure = { q => false }
         )
       assert(isSuccess == true)
-    }
-    it("should contain all output in result after applyInput") {
-      val n = STD_CHUNK_SIZE * 2
-      val l : List[Int] = rnd.take(n).toList
-      val e : Enumerator[Int] = l.toEnumerator
-      val state0 = e.s0
-      val result = state0.run()
-      assert(result.output == l)
     }
   }
 }

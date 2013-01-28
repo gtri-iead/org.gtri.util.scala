@@ -24,7 +24,7 @@ package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
 
-class TestIntToStringTranslator extends Translator[Int, String] {
+case class TestIntToStringTranslator() extends Translator[Int, String] {
   import Translator._
   case class Cont() extends State.Continue[Int,String]  {
 

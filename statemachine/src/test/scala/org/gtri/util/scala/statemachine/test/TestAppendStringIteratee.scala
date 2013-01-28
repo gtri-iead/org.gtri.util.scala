@@ -24,7 +24,7 @@ package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
 
-class TestAppendStringIteratee extends Iteratee[String, String] {
+case class TestAppendStringIteratee() extends Iteratee[String, String] {
   import Iteratee._
   case class Cont(acc : String) extends State.Continue[String, String] {
 
