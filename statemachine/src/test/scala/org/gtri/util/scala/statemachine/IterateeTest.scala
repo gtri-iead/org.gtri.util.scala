@@ -23,12 +23,14 @@ class IterateeTest extends FunSpec {
     it("should be able to flatMap/map feeding overflow from Iteratee to the next Iteratee") {
       val n = STD_CHUNK_SIZE * 2
       val l = rnd.take(n).toList
-      val sum = l.take(20).foldLeft(0) { _ + _ }
+      val sum = l.take(40).foldLeft(0) { _ + _ }
       val e : Enumerator[Int] = l.toEnumerator
       val i1 : Iteratee[Int,Int] = TestSumIntIteratee(10)
       val i2 : Iteratee[Int,Int] = TestSumIntIteratee(10)
-      val i3 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2) yield sum1 + sum2
-      val ei : Plan[Int] = e compose i3
+      val i3 : Iteratee[Int,Int] = TestSumIntIteratee(10)
+      val i4 : Iteratee[Int,Int] = TestSumIntIteratee(10)
+      val i5 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2;sum3 <- i3;sum4 <- i4) yield sum1 + sum2 + sum3 + sum4
+      val ei : Plan[Int] = e compose i5
       val result = ei.run()
       val optSum : Option[Int] = result.toOption
       assert(optSum.isDefined && optSum.get == sum)
