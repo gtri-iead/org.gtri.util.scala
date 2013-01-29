@@ -24,16 +24,26 @@ package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
 
+object TestIntToStringTranslator {
+  val log = Log(classOf[TestIntToStringTranslator])
+}
 case class TestIntToStringTranslator() extends Translator[Int, String] {
   import Translator._
+  import TestIntToStringTranslator._
   case class Cont() extends State.Continue[Int,String]  {
 
     def apply(item: Int) = {
       val s : String = item.toString
-      Continue(this, List(s))
+      Continue(
+        state = this,
+        output = List(s),
+        metadata = Seq(log.info("info1"),log.info("info2"))
+      )
     }
 
-    def apply(eoi : EndOfInput) = Success()
+    def apply(eoi : EndOfInput) = Success(
+      metadata = Seq(log.info("info1"),log.info("info2"))
+    )
   }
 
   def s0 = Cont()

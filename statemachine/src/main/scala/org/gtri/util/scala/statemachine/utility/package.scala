@@ -3,9 +3,18 @@ package org.gtri.util.scala.statemachine
 import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.statemachine.StateMachine._
 import annotation.tailrec
+import collection.mutable
 
 package object utility {
 
+  /**
+   * Force a state to be either Success or Failure by applying EndOfInput when required
+   * @param state
+   * @tparam I
+   * @tparam O
+   * @tparam A
+   * @return
+   */
   def forceDoneState[I,O,A](state: State[I,O,A]) : Result[I,O,A] = {
     state.fold(
       ifContinue = { s => s.apply(EndOfInput) },
@@ -14,203 +23,220 @@ package object utility {
     )
   }
 
+  /**
+   * Force a result to be either Success or Failure by applying EndOfInput when required
+   * @param r
+   * @tparam I
+   * @tparam O
+   * @tparam A
+   * @return
+   */
   def forceDoneResult[I,O,A](r: Result[I,O,A]) : Result[I,O,A] = {
     r.state.fold(
-      ifContinue = { s => fold(r, s.apply(EndOfInput)) },
+      ifContinue = { s => foldResults(r, s.apply(EndOfInput)) },
       ifSuccess = { s => r },
       ifFailure = { s => r }
     )
   }
 
-  def fold[I,O,A](lhs : Result[I,O,A], rhs : Result[I,O,A]) : Result[I,O,A] = {
+  /**
+   * Fold two results such that rhs.state and rhs.overflow replace lhs.state and lhs.overflow and output and metadata
+   * are accumulated
+   * @param lhs
+   * @param rhs
+   * @tparam I
+   * @tparam O
+   * @tparam A
+   * @return
+   */
+  def foldResults[I,O,A](lhs : Result[I,O,A], rhs : Result[I,O,A]) : Result[I,O,A] = {
     Result(rhs.state, lhs.output ++ rhs.output, rhs.overflow, lhs.metadata ++ rhs.metadata)
   }
 
-  /*
-    Apply sequence of input to state one input item at a time
-   */
 
-  //  def applyInput[I,O,A](state: State.Continue[I,O,A], input: Seq[I]) : Result[I,O,A] = applyInput(Result(state), input)
-  def applyInput[I,O,A](state: State[I,O,A], input: Seq[I]) : Result[I,O,A] = applyInput(Result(state), input)
-  // TODO: optimize this by accumulating results in mutable Buffer
-  @tailrec def applyInput[I,O,A](current: Result[I,O,A], input: Seq[I]) : Result[I,O,A] = {
-    current.state match {
-      case q : State.Continue[I,O,A] =>
-        input match {
-          case Nil => current
-          case head :: tail => applyInput(fold(current,q(head)),tail)
-          // Can't tail optimize current.state.fold
+//  @tailrec def applyInputToState[I,O,A](current: Result[I,O,A], input: Seq[I]) : Result[I,O,A] = {
+//    // Note: can't use state.foldResults because of tailrec optimization
+//    current.state match {
+//      case q : State.Continue[I,O,A] =>
+//        input match {
+//          case Nil => current
+//          case head :: tail => applyInputToState(foldResults(current,q(head)),tail)
+//        }
+//      case q : State.Success[I,O,A] => current.copy(overflow = input ++ current.overflow)
+//      case q : State.Failure[I,O,A] => current.copy(overflow = input ++ current.overflow)
+//    }
+//  }
+//
+
+  case class AccResult[I,O,A](var state : State[I,O,A], output : mutable.Buffer[O], var overflow : Seq[I], metadata : mutable.Buffer[Any]) {
+    def append(r: Result[I,O,A]) = {
+      state = r.state
+      output ++= r.output
+      overflow = r.overflow
+      metadata ++= r.metadata
+    }
+    def toResult : Result[I,O,A] = Result(state, output.toSeq, overflow, metadata.toSeq)
+  }
+  object AccResult {
+    def apply[I,O,A](r : Result[I,O,A]) : AccResult[I,O,A] = AccResult(r.state,r.output.toBuffer,r.overflow,r.metadata.toBuffer)
+  }
+
+  /**
+   * Apply input to a state with the option to recover from all recoverable Failures
+   * @param s
+   * @param input
+   * @param recover TRUE to recover from all recoverable Failures
+   * @tparam I
+   * @tparam O
+   * @tparam A
+   * @return
+   */
+  def applyInputToState[I,O,A](s: State[I,O,A], input: Seq[I], recover : Boolean) : Result[I,O,A] = {
+    var done = false
+    val r = AccResult(Result(s))
+    var i = input
+    do {
+      r.state.fold(
+        ifContinue = { q =>
+          if(i.nonEmpty) {
+            r.append(q(i.head))
+            i = i.tail
+          } else {
+            done = true
+          }
+        },
+        ifSuccess = { q =>
+          r.overflow = i ++ r.overflow
+          done = true
+        },
+        ifFailure = { q =>
+          if(recover && q.optRecover.isDefined) {
+            r.append(q.optRecover.get.apply())
+            i = i ++ r.overflow
+            r.overflow = Seq.empty
+          } else {
+            r.overflow = i ++ r.overflow
+            done = true
+          }
         }
-      case q : State.Success[I,O,A] => current.copy(overflow = input ++ current.overflow)
-      case q : State.Failure[I,O,A] => current.copy(overflow = input ++ current.overflow)
-    }
+      )
+    } while(done == false)
+    r.toResult
   }
 
-  /*
-    Enumerator step/run
-   */
-  def step[I,O,A](state: State[Unit,O,A]) : Result[Unit,O,A] = {
-    state.fold(
-      ifContinue = { q => step(Result(q)) },
-      ifSuccess = { q => Result(q) },
-      ifFailure = { q => Result(q)}
+  private[utility] def composeResults[A,B,C,D,ZZ](r0: Result[A,B,ZZ], r1: Result[B,C,D]) : Result[A,C,D] = {
+    Result(
+      state     = composeStates(r0.state, r1.state),
+      output    = r1.output,
+      metadata  = r0.metadata ++ r1.metadata
     )
   }
-  def step[O,A](current: Result[Unit,O,A]) : Result[Unit,O,A] = {
-    current.state match {
-      case q : State.Continue[Unit,O,A] => fold(current,q(()))
-      case q : State.Success[Unit,O,A] => current
-      case q : State.Failure[Unit,O,A] => current
-    }
-  }
 
-  def run[I,O,A](state: State[Unit,O,A]) : Result[Unit,O,A] = {
-    state.fold(
-      ifContinue = { q => run(Result(q)) },
-      ifSuccess = { q => Result(q) },
-      ifFailure = { q => Result(q)}
+  private[utility] def composeResultAndStateContinue[A,B,C,D,ZZ](r0: Result[A,B,ZZ], s1: State.Continue[B,C,D]) : Result[A,C,D] = {
+    val r1 = s1(r0.output)
+    //If r0 Success force r1 done and composeResults otherwise just composeResults
+    r0.state.fold(
+      ifSuccess = { q =>
+      // If r0 is Success, feed an EOI to r1 since r1 will not receive further input
+        composeResults(r0, forceDoneResult(r1))
+      },
+      ifContinue = { q => composeResults(r0,r1) },
+      ifFailure = { q => composeResults(r0,r1)}
     )
   }
-  // TODO: optimize this by accumulating results in mutable Buffer
-  @tailrec def run[O,A](current: Result[Unit,O,A]) : Result[Unit,O,A] = {
-    current.state match {
-      case q : State.Continue[Unit,O,A] => run(fold(current,q(())))
-      case q : State.Success[Unit,O,A] => current
-      case q : State.Failure[Unit,O,A] => current
-    }
-  }
 
-  /*
-    Compose
-   */
-  def compose[A,B,C,D,ZZ](r0: Result[A,B,ZZ], r1: Result[B,C,D]) : Result[A,C,D] = {
-    Result(compose(r0.state, r1.state),r1.output)
-  }
+  private[utility] case class CompositeStateContinue[A,B,C,D,ZZ](s0: State.Continue[A,B,ZZ], s1: State.Continue[B,C,D]) extends State.Continue[A,C,D] {
+      override def apply(xs : Seq[A]) : Result[A,C,D] = composeResultAndStateContinue(s0(xs),s1)
 
-  def continueCompose[A,B,C,D,ZZ](s0: State.Continue[A,B,ZZ], s1: State.Continue[B,C,D]) : State.Continue[A,C,D] = {
-    new State.Continue[A,C,D] {
-
-      override def apply(xs : Seq[A]) : Result[A,C,D] = {
-        val r0 : Result[A,B,ZZ] = s0(xs)
-        val r1 : Result[B,C,D] = s1(r0.output)
-        ifSuccess_ForceR1DoneAndCompose_Otherwise_JustCompose(r0,r1)
-      }
-
-      def apply(x: A) = {
-        val r0 : Result[A,B,ZZ] = s0(x)
-        val r1  : Result[B,C,D] = s1(r0.output)
-        ifSuccess_ForceR1DoneAndCompose_Otherwise_JustCompose(r0,r1)
-      }
-
-      private def ifSuccess_ForceR1DoneAndCompose_Otherwise_JustCompose(r0 : Result[A,B,ZZ], r1 : Result[B,C,D]) = {
-        r0.state.fold(
-          ifContinue = { q => compose(r0,r1) },
-          ifSuccess = { q =>
-            // If r0 is Success, feed an EOI to r1 since r1 will not receive further input
-            compose(r0, forceDoneResult(r1))
-          },
-          ifFailure = { q => compose(r0,r1)}
-        )
-      }
+      def apply(x: A) = composeResultAndStateContinue(s0(x),s1)
 
       def apply(x: EndOfInput) = {
         val eoi_r0 : Result[A,B,ZZ] = s0(x)
         val r1 : Result[B,C,D] = s1(eoi_r0.output)
         val eoi_r1 : Result[B,C,D] = forceDoneResult(r1)
-        compose(eoi_r0, eoi_r1)
+        composeResults(eoi_r0, eoi_r1)
       }
-    }
   }
 
-  def compose[A,B,C,D,ZZ](s0 : State[A,B,ZZ], s1 : State[B,C,D]) : State[A,C,D] = {
+  /**
+   * Compose two states into a composite state such that the output of s0 feeds the input of s1
+   * @param s0
+   * @param s1
+   * @tparam A
+   * @tparam B
+   * @tparam C
+   * @tparam D
+   * @tparam ZZ
+   * @return
+   */
+  def composeStates[A,B,C,D,ZZ](s0 : State[A,B,ZZ], s1 : State[B,C,D]) : State[A,C,D] = {
     s0.fold(
       ifContinue = { s0 =>
         s1.fold(
-          ifContinue = { s1 => continueCompose(s0, s1) },
-          ifSuccess = { s1 => State.Success(s1.value) },
-          ifFailure = { s1 => State.Failure() }
+          ifContinue = { s1 => CompositeStateContinue(s0, s1) }, // OK
+          ifSuccess = { s1 => State.Success(s1.value) }, // OK
+          ifFailure = { s1 => State.Failure(
+            s1.optRecover map { recover => () => composeResults(Result(s0),recover())}
+          )} // TODO: test to verify this
         )
       },
       ifSuccess = { s0 =>
         s1.fold(
-          ifContinue = { s1 => State.Failure()},
-          ifSuccess = { s1 => State.Success(s1.value) },
-          ifFailure = { s1 => State.Failure() }
+          ifContinue = { s1 => State.Failure() }, // OK
+          ifSuccess = { s1 => State.Success(s1.value) }, // OK
+          ifFailure = { s1 => State.Failure(
+            s1.optRecover map { recover => () => composeResults(Result(s0),recover())}
+          )} // TODO: test to verify this
         )
       },
       ifFailure = { s0 =>
         s1.fold(
-          ifContinue = { s1 => State.Failure() },
-          ifSuccess = { s1 => State.Failure() },
-          ifFailure = { s1 => State.Failure() }
+          ifContinue = { s1 =>
+            State.Failure(
+              optRecover = s0.optRecover map { recover =>
+                { () => composeResultAndStateContinue(recover(), s1) }
+              }
+            )
+          }, // TODO: test to verify this
+          ifSuccess = { s1 =>
+            State.Failure(
+              optRecover = s0.optRecover map { recover =>
+                { () =>
+                  val result = recover()
+                  Result(
+                    state = State.Success(s1.value),
+                    overflow = result.overflow,
+                    metadata = result.metadata
+                  )
+                }
+              }
+            )
+          }, // TODO: test to verify this
+          ifFailure = { s1 =>
+            State.Failure(
+              for(s0_recover <- s0.optRecover;s1_recover <- s1.optRecover) yield { () => composeResults(s0_recover(), s1_recover()) }
+            )} // TODO: test to verify this
         )
       }
     )
   }
 
-  def compose[A,B,C,D,ZZ](m0 : StateMachine[A,B,ZZ], m1 : StateMachine[B,C,D]) : StateMachine[A,C,D] = new StateMachine[A,C,D] {
-    def s0 = compose(m0.s0,m1.s0)
+  private[utility] case class CompositeStateMachine[A,B,C,D,ZZ](m0 : StateMachine[A,B,ZZ], m1 : StateMachine[B,C,D]) extends StateMachine[A,C,D] {
+    def s0 = composeStates(m0.s0,m1.s0)
   }
 
-  /*
-    Iteratee.State map/FlatMap
+  /**
+   * Compose two state machines into a composite state machine such that the output of s0 feeds the input of s1
+   * @param m0
+   * @param m1
+   * @tparam A
+   * @tparam B
+   * @tparam C
+   * @tparam D
+   * @tparam ZZ
+   * @return
    */
-  def mapState[I,A,B](s : State[I,Unit,A], f: A => B) : State[I,Unit,B] = {
-    flatMapState(s, { (a : A) => bindState(f(a)) } )
-  }
-
-  def bindState[I,A](value : A) : State[I,Unit,A] = State.Success(value)
-
-  def flatMapResult[I,A,B](r : Result[I,Unit,A], f: A => State[I,Unit,B]) : Result[I,Unit,B] = {
-    r.state.fold(
-      ifContinue = { q => Result(
-        state = ContinueStateFlatMap(q,f),
-        metadata = r.metadata
-      )},
-      ifSuccess = { q =>
-        val overflowResult = applyInput(f(q.value),r.overflow)
-        overflowResult.copy(metadata = overflowResult.metadata ++ r.metadata)
-      },
-      ifFailure = { q => Result(
-        state = State.Failure(),
-        overflow = r.overflow,
-        metadata = r.metadata
-      )}
-    )
-  }
-  
-  private[utility] case class ContinueStateFlatMap[I,A,B](s : State.Continue[I,Unit,A], f: A => State[I,Unit,B]) extends State.Continue[I,Unit,B] {
-    override def apply(xs: Seq[I]) = flatMapResult(s.apply(xs),f)
-  
-    def apply(x: I) = flatMapResult(s.apply(x),f)
-  
-    def apply(x: EndOfInput) = flatMapResult(s.apply(x),f)
-  }
-  
-  def flatMapState[I,A,B](s : State[I,Unit,A], f: A => State[I,Unit,B]) : State[I,Unit,B] = {
-    s.fold(
-      ifContinue = { q => ContinueStateFlatMap(q,f) },
-      ifSuccess = { q => f(q.value) },
-      ifFailure = { q => State.Failure() }
-    )
-  }
-
-
-  /*
-    Iteratee map/FlatMap
-   */
-  def mapStateMachine[I,A,B](m : StateMachine[I,Unit,A], f: A => B) : StateMachine[I,Unit,B] = {
-    flatMapStateMachine(m, { (a: A) => bindStateMachine(f(a)) })
-  }
-
-  def bindStateMachine[I,A](value : A) = new StateMachine[I,Unit,A] {
-    def s0 = bindState(value)
-  }
-
-  def flatMapStateMachine[I,A,B](m : StateMachine[I,Unit,A], f: A => StateMachine[I,Unit,B]) : StateMachine[I,Unit,B] =
-    new StateMachine[I,Unit,B] {
-      def s0 = flatMapState(m.s0, { (a : A) => f(a).s0 })
-    }
-
+  def composeStateMachines[A,B,C,D,ZZ](m0 : StateMachine[A,B,ZZ], m1 : StateMachine[B,C,D]) : StateMachine[A,C,D]
+    = CompositeStateMachine(m0,m1)
 }
 

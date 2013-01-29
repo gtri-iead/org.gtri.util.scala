@@ -24,20 +24,34 @@ package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
 
+object TestSumIntIteratee {
+  val log = Log(classOf[TestSumIntIteratee])
+}
 case class TestSumIntIteratee(maxN : Int = Int.MaxValue) extends Iteratee[Int, Int] {
-//  import Iteratee._
-  case class Cont(n : Int, loopState : Int) extends Iteratee.State.Continue[Int, Int] {
+  import Iteratee._
+  import TestSumIntIteratee._
+  case class Cont(n : Int, loopState : Int) extends State.Continue[Int, Int] {
     def apply(item : Int) = {
 //      println(s"n=$n item=$item")
       if(n < maxN) {
-        Iteratee.Continue(new Cont(n + 1,loopState + item))
+        Continue(
+          state = new Cont(n + 1,loopState + item),
+          metadata = Seq(log.info("info1"),log.info("info2"))
+        )
       } else {
-        Iteratee.Success(loopState + item)
+        Success(
+          value = loopState + item,
+          metadata = Seq(log.info("info1"),log.info("info2"))
+        )
       }
     }
 
-    def apply(eoi : EndOfInput) = Iteratee.Success(loopState)
+    def apply(eoi : EndOfInput) = Success(
+      value = loopState,
+      metadata = Seq(log.info("info1"),log.info("info2"))
+    )
   }
+
   def s0 = Cont(1, 0)
 }
 

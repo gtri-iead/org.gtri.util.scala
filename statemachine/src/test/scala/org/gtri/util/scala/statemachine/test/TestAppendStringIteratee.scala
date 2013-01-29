@@ -24,13 +24,23 @@ package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
 
+object TestAppendStringIteratee {
+  val log = Log(classOf[TestAppendStringIteratee])
+}
 case class TestAppendStringIteratee() extends Iteratee[String, String] {
   import Iteratee._
+  import TestAppendStringIteratee._
   case class Cont(acc : String) extends State.Continue[String, String] {
 
-    def apply(item: String) = Continue(Cont(acc + item))
+    def apply(item: String) = Continue(
+      state = Cont(acc + item),
+      metadata = Seq(log.info("info1"),log.info("info2"))
+    )
 
-    def apply(eoi : EndOfInput) = Success(acc)
+    def apply(eoi : EndOfInput) = Success(
+      value = acc,
+      metadata = Seq(log.info("info1"),log.info("info2"))
+    )
   }
   def s0 = Cont("")
 }

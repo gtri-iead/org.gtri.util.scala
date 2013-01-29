@@ -33,6 +33,7 @@ package object statemachine {
   val   ∅                 =   Unit
 
   type  Enumerator[O]     =   StateMachine[Unit,O,Unit]
+  type  Enumerable[O,A]   =   StateMachine[Unit,O,A]
   type  Iteratee[I,A]     =   StateMachine[I,Unit,A]
   type  Translator[I,O]   =   StateMachine[I,O,Unit]
   type  Plan[A]           =   StateMachine[Unit,Unit,A]
@@ -44,10 +45,11 @@ package object statemachine {
 
   implicit class implicitStateMachineResultOps[I,O,A](self : Result[I,O,A]) {
     def toOption : Option[A] = self.state.toOption
+    def toOption(recover : Boolean) : Option[A] = self.state.toOption(recover)
   }
 
   implicit class implicitStateMachineStateOps[I,O,A](self: State[I,O,A]) {
-    def compose[OO,AA](that: State[O,OO,AA]) : State[I,OO,AA] = utility.compose(self, that)
+    def compose[OO,AA](that: State[O,OO,AA]) : State[I,OO,AA] = utility.composeStates(self, that)
     def toOption : Option[A] = {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
@@ -55,29 +57,42 @@ package object statemachine {
         case q : State.Continue[I,O,A] => None
       }
     }
+    def toOption(recover : Boolean) : Option[A] = {
+      self match {
+        case q : State.Success[I,O,A] => Some(q.value)
+        case q : State.Failure[I,O,A] =>
+          if(recover && q.optRecover.isDefined) {
+            val r = q.optRecover.get()
+            r.toOption
+          } else {
+            None
+          }
+        case q : State.Continue[I,O,A] => None
+      }
+    }
   }
 
   implicit class implicitStateMachineOps[I,O,A](self: StateMachine[I,O,A]) {
-    def compose[OO,AA](that: StateMachine[O,OO,AA]) : StateMachine[I,OO,AA] = utility.compose(self, that)
+    def compose[OO,AA](that: StateMachine[O,OO,AA]) : StateMachine[I,OO,AA] = utility.composeStateMachines(self, that)
   }
 
-  implicit class implicitEnumeratorStateOps[O,A](self: State[Unit,O,A]) {
-    def step() = utility.step(self)
-    def run() = utility.run(self)
+  implicit class implicitEnumerableStateOps[O,A](self: Enumerable.State[O,A]) {
+    def step() = Enumerable.impl.stepEnumerableState(self)
+    def run(recover : Boolean = false) = Enumerable.impl.runEnumerableState(self, recover)
   }
 
-  implicit class implicitEnumeratorStateMachineOps[O,A](self: StateMachine[Unit,O,A]) {
-    def run() = utility.run(self.s0)
+  implicit class implicitEnumerableStateMachineOps[O,A](self: Enumerable[O,A]) {
+    def run(recover : Boolean = false) = Enumerable.impl.runEnumerableState(self.s0, recover)
   }
 
-  implicit class implicitIterateeStateOps[I,A](self: State[I,Unit,A]) {
-    def flatMap[B](f: A => State[I,Unit,B]) : State[I,Unit,B] = utility.flatMapState(self, f)
-    def map[B](f: A => B) : State[I,Unit,B] = utility.mapState(self, f)
+  implicit class implicitIterateeStateOps[I,A](self: Iteratee.State[I,A]) {
+    def flatMap[B](f: A => Iteratee.State[I,B]) : Iteratee.State[I,B] = Iteratee.impl.flatMapIterateeState(self, f)
+    def map[B](f: A => B) : Iteratee.State[I,B] = Iteratee.impl.mapIterateeState(self, f)
   }
 
-  implicit class implicitIterateeStateMachineOps[I,A](self: StateMachine[I,Unit,A]) {
-    def flatMap[B](f: A => StateMachine[I,Unit,B]) : StateMachine[I,Unit,B] = utility.flatMapStateMachine(self, f)
-    def map[B](f: A => B) : StateMachine[I,Unit,B] = utility.mapStateMachine(self, f)
+  implicit class implicitIterateeOps[I,A](self: Iteratee[I,A]) {
+    def flatMap[B](f: A => Iteratee[I,B]) : Iteratee[I,B] = Iteratee.impl.flatMapIteratee(self, f)
+    def map[B](f: A => B) : Iteratee[I,B] = Iteratee.impl.mapIteratee(self, f)
   }
 
   implicit class implicitStateMachineStateTuple2[A,B,C](tuple: (State[Unit,A,_], State[A,B,C])) {

@@ -86,3 +86,10 @@ Jan 28
 #1: Added Plan as StateMachine[Unit,Unit,A]
 
 #2: Added more tests
+
+#3: Should optRecover return a State or a Result? (Currently returns a Result)
+
+Jan 29
+
+#1: Fixed Failure/Recover tests and code
+#2: Added Enumerable[O,A] -> StateMachine[Unit,O,A]

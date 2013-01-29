@@ -88,14 +88,14 @@ object StateMachine {
     sealed trait Done[I,O,A] extends State[I,O,A] {
       // Better performing alternative to using match statement
       def fold[X](
-        ifSuccess   : Success [I,O,A]  => X,
-        ifFailure   : Failure [I,O,A]  => X
+        ifSuccess   : State.Success [I,O,A]  => X,
+        ifFailure   : State.Failure [I,O,A]  => X
       ) : X
     }
 
     abstract class Continue[I,O,A] extends State[I,O,A] {
 
-      def apply( xs  : Seq[I]     ) : Result[I,O,A] = utility.applyInput(this, xs)
+      def apply( xs  : Seq[I]     ) : Result[I,O,A] = utility.applyInputToState(this, xs, false)
       def apply( x   : I          ) : Result[I,O,A]
       def apply( x   : EndOfInput ) : Result[I,O,A]
 
@@ -150,7 +150,7 @@ object StateMachine {
   type  F  [∑,Γ,A]   =   State.Done           [∑,Γ,A]
   type  ∂  [∑,Γ,A]   =   State.Continue       [∑,Γ,A]
 
-  val   ⊳        =   Continue
-  val   ⊡        =   Success
-  val   ⊠        =   Failure
+  val   ⊳            =   Continue
+  val   ⊡            =   Success
+  val   ⊠            =   Failure
 }
