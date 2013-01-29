@@ -68,5 +68,12 @@ class TraversableEnumeratorTest extends FunSpec {
         )
       assert(isSuccess == true)
     }
+    it("should return Progress metadata if traversable has definite size") {
+      val n = STD_CHUNK_SIZE * 2
+      val l : List[Int] = rnd.take(n).toList
+      val e : Enumerator[Int] = l.toEnumerator
+      val result = e.run()
+      assert(result.metadata == Seq(Enumerator.Progress(0,n),Enumerator.Progress(STD_CHUNK_SIZE,n),Enumerator.Progress(n,n)))
+    }
   }
 }

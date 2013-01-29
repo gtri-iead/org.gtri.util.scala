@@ -99,7 +99,7 @@ object StateMachine {
       def apply( x   : I          ) : Result[I,O,A]
       def apply( x   : EndOfInput ) : Result[I,O,A]
 
-      def fold[X](
+      final def fold[X](
         ifContinue  : State.Continue  [I,O,A] => X,
         ifSuccess   : State.Success   [I,O,A] => X,
         ifFailure   : State.Failure   [I,O,A] => X

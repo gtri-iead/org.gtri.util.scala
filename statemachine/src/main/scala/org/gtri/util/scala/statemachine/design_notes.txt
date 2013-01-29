@@ -93,3 +93,4 @@ Jan 29
 
 #1: Fixed Failure/Recover tests and code
 #2: Added Enumerable[O,A] -> StateMachine[Unit,O,A]
+#3: Added Progress to TraversableEnumerator

@@ -30,19 +30,47 @@ case class TraversableEnumerator[A](
   import Enumerator._
   require(chunkSize > 0)
 
-  case class ∂∂(current : Traversable[A]) extends ∂[A] {
+  case class ContWithoutProgress(current : Traversable[A]) extends State.Continue[A] {
 
     def apply(x : Unit) : Result[A] = {
       val (nextChunk, remaining) = current.splitAt(chunkSize)
-//      println("nextChunk="+nextChunk)
       if(remaining.isEmpty) {
-        ⊡(nextChunk.toSeq)
+        Success(nextChunk.toSeq)
       } else {
-        ⊳(∂∂(remaining), nextChunk.toSeq)
+        Continue(ContWithoutProgress(remaining), nextChunk.toSeq)
       }
     }
-    def apply(x : EndOfInput) = ⊡()
+    def apply(x : EndOfInput) = Success()
   }
 
-  def s0 = ∂∂(t)
+  case class ContWithProgress(maxN : Int, current : Traversable[A]) extends State.Continue[A] {
+
+    def currentProgress = Progress(maxN - current.size, maxN)
+
+    def apply(x : Unit) : Result[A] = {
+      val (nextChunk, remaining) = current.splitAt(chunkSize)
+      if(remaining.isEmpty) {
+        Success(
+          output = nextChunk.toSeq,
+          metadata = Seq(currentProgress, Progress(maxN, maxN))
+        )
+      } else {
+        val output = nextChunk.toSeq
+        Continue(
+          state = ContWithProgress(maxN,remaining),
+          output = output,
+          metadata = Seq(currentProgress)
+        )
+      }
+    }
+    def apply(x : EndOfInput) = Success(metadata = Seq(currentProgress))
+  }
+
+  def s0 = {
+    if(t.hasDefiniteSize) {
+      ContWithProgress(t.size,t)
+    } else {
+      ContWithoutProgress(t)
+    }
+  }
 }

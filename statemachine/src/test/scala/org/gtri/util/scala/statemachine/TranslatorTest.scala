@@ -55,11 +55,13 @@ class TranslatorTest extends FunSpec {
       val n = STD_CHUNK_SIZE * 2
       val l : List[Int] = rnd.take(n).toList
       val ls : List[String] = for(i <- l) yield i.toString
-      val e : Enumerator[Int] = l.toEnumerator
-      val t : Translator[Int,String] = TestIntToStringTranslator()
-      val ei : Enumerator[String] = e compose t
-      val result = ei.run()
-      assert(result.metadata.length == (n * 2)+2)
+      val e : Enumerator[Int] = TestRecoverEnumerator(l) // (n * 2) + ((n / 5) * 2)
+      val t : Translator[Int,String] = TestIntToStringTranslator() // (n * 2) + 2
+      val et : Enumerator[String] = e compose t
+      val result = et.run(recover = true)
+      val eMetadataCount = (n * 2) + ((n/5)*2)
+      val tMetadataCount = (n * 2) + 2
+      assert(result.metadata.length == (eMetadataCount + tMetadataCount))
     }
   }
 }

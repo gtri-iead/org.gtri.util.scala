@@ -80,7 +80,6 @@ class PlanTest extends FunSpec {
       val i : Iteratee[String,String] = TestAppendStringIteratee() // (n * 2) + 2
       val eit : Plan[String] = e compose t compose i
       val result = eit.run(recover = true)
-      println("result.metdata.length="+result.metadata.length)
       val eMetadataCount = (n * 2) + ((n/5)*2)
       val tMetadataCount = (n * 2) + 2
       val iMetadataCount = (n * 2) + 2
