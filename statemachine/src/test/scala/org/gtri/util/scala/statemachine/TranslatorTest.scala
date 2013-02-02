@@ -47,7 +47,7 @@ class TranslatorTest extends FunSpec {
       val t : Translator[Int,String] = TestIntToStringTranslator()
       val it : Iteratee[Int,String] = t compose i
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneResult(utility.applyInputToState(it.s0, l, false))
+      val result = utility.forceDoneTransition(utility.applyInputToState(it.s0, l, IssueRecoverStrategy.STRICT))
       val optSum : Option[String] = result.toOption
       assert(optSum.isDefined && optSum.get == ls)
     }
@@ -58,7 +58,7 @@ class TranslatorTest extends FunSpec {
       val e : Enumerator[Int] = TestRecoverEnumerator(l) // (n * 2) + ((n / 5) * 2)
       val t : Translator[Int,String] = TestIntToStringTranslator() // (n * 2) + 2
       val et : Enumerator[String] = e compose t
-      val result = et.run(recover = true)
+      val result = et.run(shouldRecover = { _ => true })
       val eMetadataCount = (n * 2) + ((n/5)*2)
       val tMetadataCount = (n * 2) + 2
       assert(result.metadata.length == (eMetadataCount + tMetadataCount))

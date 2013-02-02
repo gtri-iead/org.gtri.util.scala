@@ -23,13 +23,14 @@ package org.gtri.util.scala.statemachine.Enumerable
 
 import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.statemachine.utility
+import org.gtri.util.scala.statemachine.IssueSeverityCode._
 
 object impl {
-  private[impl] def stepEnumerableResult[O,A](current: Result[O,A]) : Result[O,A] = {
+  private[impl] def stepEnumerableTransition[O,A](current: Transition[O,A]) : Transition[O,A] = {
     current.state.fold(
-      ifContinue = { q => utility.foldResults(current,q(())) },
+      ifContinuation = { q => utility.foldTransition(current,q(())) },
       ifSuccess = { _ => current },
-      ifFailure = { _ => current }
+      ifHalted = { _ => current }
     )
   }
 
@@ -40,11 +41,11 @@ object impl {
    * @tparam A
    * @return
    */
-  def stepEnumerableState[O,A](s: State[O,A]) : Result[O,A] = {
+  def stepEnumerableState[O,A](s: State[O,A]) : Transition[O,A] = {
     s.fold(
-      ifContinue = { q => stepEnumerableResult(Result(q)) },
-      ifSuccess = { q => Result(q) },
-      ifFailure = { q => Result(q)}
+      ifContinuation = { q => stepEnumerableTransition(Transition(q)) },
+      ifSuccess = { q => Transition(q) },
+      ifHalted = { q => Transition(q)}
     )
   }
 
@@ -55,17 +56,17 @@ object impl {
    * @tparam A
    * @return
    */
-  def stepEnumerable[O,A](m : Enumerable[O,A]) : Result[O,A] = stepEnumerableState(m.s0)
+  def stepEnumerable[O,A](m : Enumerable[O,A]) : Transition[O,A] = stepEnumerableState(m.s0)
 
-  private[impl] def runEnumerableResult[O,A](r0 : Result[O,A], recover : Boolean) : Result[O,A] = {
+  private[impl] def runEnumerableTransition[O,A](r0 : Transition[O,A], shouldRecover: State.Halted[O,A] => Boolean) : Transition[O,A] = {
     var done = false
-    val r = utility.AccResult(r0)
+    val r = utility.TransitionAccumulator(r0)
     do {
       r.state.fold(
-        ifContinue = { q => r.append(q(())) },
+        ifContinuation = { q => r.append(q(())) },
         ifSuccess = { q => done = true },
-        ifFailure = { q =>
-          if(recover && q.optRecover.isDefined) {
+        ifHalted = { q =>
+          if(shouldRecover(q) && q.optRecover.isDefined) {
             r.append(q.optRecover.get.apply())
           } else {
             done = true
@@ -73,14 +74,14 @@ object impl {
         }
       )
     } while(done == false)
-    r.toResult
+    r.toTransition
   }
 
-  // Previous functional implementation of runEnumerableResult
-  //  @tailrec def runEnumerableResult[O,A](current: Result[O,A], buffer: scala.collection.mutable.Buffer) : Result[O,A] = {
-  //    // Note: can't use state.foldResults because of tailrec optimization
+  // Previous functional implementation of runEnumerableTransition
+  //  @tailrec def runEnumerableTransition[O,A](current: Transition[O,A], buffer: scala.collection.mutable.Buffer) : Transition[O,A] = {
+  //    // Note: can't use state.foldTransitions because of tailrec optimization
   //    current.state match {
-  //      case q : State.Continue[O,A] => runEnumerableResult(foldResults(current,q(())))
+  //      case q : State.Continue[O,A] => runEnumerableTransition(foldTransitions(current,q(())))
   //      case q : State.Success[O,A] => current
   //      case q : State.Failure[O,A] => current
   //    }
@@ -88,22 +89,22 @@ object impl {
 
   /**
    * Step an Enumerable.State until it returns Success/Failure with the option to recover from all recoverable Failures
-   * @param state
-   * @param recover TRUE to recover from all recoverable Failures
+   * @param s
+   * @param shouldRecover TRUE to recover from Halted state
    * @tparam O
    * @tparam A
    * @return
    */
-  def runEnumerableState[O,A](s: State[O,A], recover: Boolean) : Result[O,A] = runEnumerableResult(Result(s), recover)
+  def runEnumerableState[O,A](s: State[O,A], shouldRecover: State.Halted[O,A] => Boolean) : Transition[O,A] = runEnumerableTransition(Transition(s), shouldRecover)
 
   /**
    * Step an Enumerable until it returns Success/Failure with the option to recover from all recoverable Failures
-   * @param state
-   * @param recover TRUE to recover from all recoverable Failures
+   * @param m
+   * @param shouldRecover TRUE to recover from Halted state
    * @tparam O
    * @tparam A
    * @return
    */
-  def runEnumerable[O,A](m: Enumerable[O,A], recover: Boolean) : Result[O,A] = runEnumerableState(m.s0, recover)
+  def runEnumerable[O,A](m: Enumerable[O,A], shouldRecover: State.Halted[O,A] => Boolean) : Transition[O,A] = runEnumerableState(m.s0, shouldRecover)
 
 }

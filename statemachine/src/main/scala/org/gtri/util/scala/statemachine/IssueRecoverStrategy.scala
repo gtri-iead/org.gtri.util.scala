@@ -19,11 +19,18 @@
     along with org.gtri.util.scala.statemachine library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.statemachine.Enumerator
+package org.gtri.util.scala.statemachine
 
-case class Progress(n : Int, maxN : Int) {
-  def percentComplete = (n.toDouble / maxN.toDouble) * 100.0
-}
-object Progress {
-  val empty = Progress(0,0)
+import IssueSeverityCode._
+
+object IssueRecoverStrategy {
+  val STRICT = { (q: StateMachine.State.Halted[_,_,_]) => false }
+  val NORMAL = { (q: StateMachine.State.Halted[_,_,_]) =>
+    q.severityCode match {
+      case WARN => true
+      case ERROR => false
+      case FATAL => false
+    }
+  }
+  val LAX = { (q: StateMachine.State.Halted[_,_,_]) => true }
 }

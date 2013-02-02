@@ -21,59 +21,67 @@
 */
 package org.gtri.util.scala.statemachine
 
+import IssueSeverityCode._
+
 package object Plan {
-  type Result[A]      = StateMachine.Result[Unit,Unit,A]
-  object Result {
+  type Transition[A]        = StateMachine.Transition[Unit,Unit,A]
+  object Transition {
     def apply[A](
       state     :   State[A],
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = StateMachine.Result[Unit,Unit,A](
-      state     =   state,
-      metadata  =   metadata
-    )
+    ) = StateMachine.Transition[Unit,Unit,A](state=state, metadata=metadata)
   }
 
-  type State[A]         = StateMachine.State[Unit,Unit,A]
+  type State[A]             = StateMachine.State[Unit,Unit,A]
   object State {
-    type Done[A]        = StateMachine.State.Done[Unit,Unit,A]
+    type Done[A]            = StateMachine.State.Done[Unit,Unit,A]
 
-    type Continue[A]    = StateMachine.State.Continue[Unit,Unit,A]
+    type Continuation[A]    = StateMachine.State.Continuation[Unit,Unit,A]
 
-    type Success[A]     = StateMachine.State.Success[Unit,Unit,A]
-    val Success           = StateMachine.State.Success
+    type Success[A]         = StateMachine.State.Success[Unit,Unit,A]
+    val Success             = StateMachine.State.Success
 
-    type Failure[A]     = StateMachine.State.Failure[Unit,Unit,A]
-    val Failure           = StateMachine.State.Failure
+    type Halted[A]           = StateMachine.State.Halted[Unit,Unit,A]
+    val Halted               = StateMachine.State.Halted
   }
 
   object Continue {
     def apply[A](
-      state     :   State.Continue[A],
+      state     :   State.Continuation[A],
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = Result[A](
-      state     =   state,
-      metadata  =   metadata
-    )
+    ) = StateMachine.Continue[Unit,Unit,A](state=state, metadata=metadata)
   }
 
-  object Success {
+  object Succeed {
     def apply[A](
       value : A,
       metadata    :   Seq[Any]                    = Seq.empty
-    ) = Result[A](
-      state     =   State.Success(value),
-      metadata  =   metadata
-    )
+    ) = StateMachine.Succeed[Unit,Unit,A](value=value, metadata=metadata)
   }
 
-  object Failure {
+  object Halt {
     def apply[A](
-      optRecover  :   Option[() => Result[A]]   = None,
-      metadata    :   Seq[Any]                    = Seq.empty
-    ) = Result[A](
-      state     =   State.Failure(optRecover),
-      metadata  =   metadata
-    )
+      issues      :   Seq[Issue],
+      optRecover  :   Option[() => Transition[A]]   = None,
+      metadata    :   Seq[Any]                      = Seq.empty    
+    ) = StateMachine.Halt[Unit,Unit,A](issues=issues, optRecover=optRecover, metadata=metadata) 
+    def warn[A](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      recover     :   () => Transition[A],
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = StateMachine.Halt[Unit,Unit,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), metadata=metadata)
+    def error[A](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      recover     :   () => Transition[A],
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = StateMachine.Halt[Unit,Unit,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), metadata=metadata)
+    def fatal[A](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = StateMachine.Halt[Unit,Unit,A](issues=Seq(Issue.fatal(message,cause)), metadata=metadata)
   }
 
     /*
@@ -85,11 +93,11 @@ package object Plan {
   A => final success value type
   ∅ => 1) the type of the empty set 2) instance of the empty set
    */
-  type  S  [A]   =   State                      [A]
-  type  F  [A]   =   State.Done                 [A]
-  type  ∂  [A]   =   State.Continue             [A]
-
-  val   ⊳          =   Continue
-  val   ⊡          =   Success
-  val   ⊠          =   Failure
+//  type  S  [A]   =   State                      [A]
+//  type  F  [A]   =   State.Done                 [A]
+//  type  ∂  [A]   =   State.Continue             [A]
+//
+//  val   ⊳          =   Continue
+//  val   ⊡          =   Success
+//  val   ⊠          =   Issue
 }

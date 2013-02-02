@@ -30,7 +30,7 @@ object TestSumIntIteratee {
 case class TestSumIntIteratee(maxN : Int = Int.MaxValue) extends Iteratee[Int, Int] {
   import Iteratee._
   import TestSumIntIteratee._
-  case class Cont(n : Int, loopState : Int) extends State.Continue[Int, Int] {
+  case class Cont(n : Int, loopState : Int) extends State.Continuation[Int, Int] {
     def apply(item : Int) = {
 //      println(s"n=$n item=$item")
       if(n < maxN) {
@@ -39,14 +39,14 @@ case class TestSumIntIteratee(maxN : Int = Int.MaxValue) extends Iteratee[Int, I
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
       } else {
-        Success(
+        Succeed(
           value = loopState + item,
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
       }
     }
 
-    def apply(eoi : EndOfInput) = Success(
+    def apply(eoi : EndOfInput) = Succeed(
       value = loopState,
       metadata = Seq(log.info("info1"),log.info("info2"))
     )

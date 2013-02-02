@@ -25,19 +25,19 @@ class A[T](s : String, f: T) {
   }
   def foo2(s : String, f : T) : Int = {
     log.begin("foo2", Seq("s" -> s, "f" -> f))
-    log trace "asdf"
-    log debug "asdf"
-    log info "asdf"
-    log warn "sadf"
-    log warn new IllegalArgumentException
-    log warn("asdf",new IllegalArgumentException)
-    log error "sadf"
-    log error new IllegalArgumentException
-    log error("asdf",new IllegalArgumentException)
-    log fatal "sadf"
-    log fatal new IllegalArgumentException
-    log fatal("asdf",new IllegalArgumentException)
-    val retv = 1
+      log trace "asdf"
+      log debug "asdf"
+      log info "asdf"
+      log warn "sadf"
+      log warn new IllegalArgumentException
+      log warn("asdf",new IllegalArgumentException)
+      log error "sadf"
+      log error new IllegalArgumentException
+      log error("asdf",new IllegalArgumentException)
+      log fatal "sadf"
+      log fatal new IllegalArgumentException
+      log fatal("asdf",new IllegalArgumentException)
+      val retv = 1
     log.end("foo2",retv)
     retv
   }

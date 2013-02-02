@@ -49,25 +49,31 @@ object impl {
    */
   def bindIterateeState[I,A](value : A) : State[I,A] = State.Success(value)
 
-  private[impl] def flatMapIterateeResult[I,A,B](r : Result[I,A], f: A => State[I,B]) : Result[I,B] = {
+  private[impl] def flatMapIterateeResult[I,A,B](r : Transition[I,A], f: A => State[I,B]) : Transition[I,B] = {
     r.state.fold(
-      ifContinue = { q => Result(
+      ifContinuation = { q => Transition(
         state = FlatMapIterateeStateContinue(q,f),
         metadata = r.metadata
       )},
       ifSuccess = { q =>
-        val overflowResult = utility.applyInputToState(f(q.value),r.overflow, false)
+        val overflowResult = utility.applyInputToState(f(q.value),r.overflow,IssueRecoverStrategy.STRICT)
         overflowResult.copy(metadata = overflowResult.metadata ++ r.metadata)
       },
-      ifFailure = { q => Result(
-        state = State.Failure(q.optRecover map { recover => () => flatMapIterateeResult(recover(), f)}),
-        overflow = r.overflow,
-        metadata = r.metadata
-      )}
+      ifHalted = { q =>
+        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeResult[I,A,B](recover(), f) }
+        Transition(
+          state = State.Halted(
+            issues = q.issues,
+            optRecover = optRecover
+          ),
+          overflow = r.overflow,
+          metadata = r.metadata
+        )
+      }
     )
   }
 
-  private[impl] case class FlatMapIterateeStateContinue[I,A,B](s : State.Continue[I,A], f: A => State[I,B]) extends State.Continue[I,B] {
+  private[impl] case class FlatMapIterateeStateContinue[I,A,B](s : State.Continuation[I,A], f: A => State[I,B]) extends State.Continuation[I,B] {
     override def apply(xs: Seq[I]) = flatMapIterateeResult(s.apply(xs),f)
   
     def apply(x: I) = flatMapIterateeResult(s.apply(x),f)
@@ -86,9 +92,15 @@ object impl {
    */
   def flatMapIterateeState[I,A,B](s : State[I,A], f: A => State[I,B]) : State[I,B] = {
     s.fold(
-      ifContinue = { q => FlatMapIterateeStateContinue(q,f) },
+      ifContinuation = { q => FlatMapIterateeStateContinue(q,f) },
       ifSuccess = { q => f(q.value) },
-      ifFailure = { q => State.Failure(q.optRecover map { recover => () => flatMapIterateeResult(recover(),f) }) }
+      ifHalted = { q =>
+        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeResult[I,A,B](recover(),f) }
+        State.Halted(
+          issues = q.issues,
+          optRecover = optRecover
+        )
+      }
     )
   }
 

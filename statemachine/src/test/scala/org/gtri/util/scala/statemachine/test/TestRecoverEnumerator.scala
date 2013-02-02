@@ -28,27 +28,29 @@ object TestRecoverEnumerator {
   val log = Log(classOf[TestRecoverEnumerator[_]])
 }
 case class TestRecoverEnumerator[A](t: Traversable[A]) extends Enumerator[A] {
-  import org.gtri.util.scala.statemachine.Enumerator._
+  import Enumerator._
   import TestRecoverEnumerator._
 
-  case class ∂∂(n : Int, current : Traversable[A]) extends ∂[A] {
+  case class Cont(n : Int, current : Traversable[A]) extends State.Continuation[A] {
 
-    def apply(x : Unit) : Result[A] = {
+    def apply(x : Unit) : Transition[A] = {
       val (nextChunk, remaining) = current.splitAt(1)
       if(remaining.isEmpty) {
-        ⊡(
+        Succeed(
           output = nextChunk.toSeq,
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
       } else {
-        val r = ⊳(
-          state = ∂∂(n + 1,remaining),
+        val r = Continue(
+          state = Cont(n + 1,remaining),
           output = nextChunk.toSeq,
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
         if(n % 5 == 0) {
-          ⊠(
-            optRecover = Some(() => r),
+          Halt.error(
+            message = "error",
+            cause = None,
+            recover = () => r,
             metadata = Seq(log.error("error1"),log.info("error2"))
           )
         } else {
@@ -57,8 +59,8 @@ case class TestRecoverEnumerator[A](t: Traversable[A]) extends Enumerator[A] {
 
       }
     }
-    def apply(x : EndOfInput) = ⊡(metadata = Seq(log.info("info1"),log.info("info2")))
+    def apply(x : EndOfInput) = Succeed(metadata = Seq(log.info("info1"),log.info("info2")))
   }
 
-  def s0 = ∂∂(1, t)
+  def s0 = Cont(1, t)
 }

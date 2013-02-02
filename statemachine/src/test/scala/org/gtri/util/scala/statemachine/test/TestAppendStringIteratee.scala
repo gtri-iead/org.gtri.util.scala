@@ -30,14 +30,14 @@ object TestAppendStringIteratee {
 case class TestAppendStringIteratee() extends Iteratee[String, String] {
   import Iteratee._
   import TestAppendStringIteratee._
-  case class Cont(acc : String) extends State.Continue[String, String] {
+  case class Cont(acc : String) extends State.Continuation[String, String] {
 
     def apply(item: String) = Continue(
       state = Cont(acc + item),
       metadata = Seq(log.info("info1"),log.info("info2"))
     )
 
-    def apply(eoi : EndOfInput) = Success(
+    def apply(eoi : EndOfInput) = Succeed(
       value = acc,
       metadata = Seq(log.info("info1"),log.info("info2"))
     )

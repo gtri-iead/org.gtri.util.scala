@@ -19,11 +19,11 @@
     along with org.gtri.util.scala.statemachine library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.statemachine.Enumerator
+package org.gtri.util.scala.statemachine
 
-case class Progress(n : Int, maxN : Int) {
-  def percentComplete = (n.toDouble / maxN.toDouble) * 100.0
+object IssueSeverityCode extends Enumeration {
+  type IssueSeverityCode = Value
+  val WARN, ERROR, FATAL = Value
 }
-object Progress {
-  val empty = Progress(0,0)
-}
+
+

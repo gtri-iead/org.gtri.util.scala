@@ -21,72 +21,79 @@
 */
 package org.gtri.util.scala.statemachine
 
+import IssueSeverityCode._
+
 package object Translator {
-  type Result[I,O]      = StateMachine.Result[I,O,Unit]
-  object Result {
+  type Transition[I,O]        = StateMachine.Transition[I,O,Unit]
+  object Transition {
     def apply[I,O](
       state     :   State[I,O],
       output    :   Seq[O]                      = Seq.empty,
       overflow  :   Seq[I]                      = Seq.empty,
       metadata  :   Seq[Any]                    = Seq.empty
-    ) = StateMachine.Result[I,O,Unit](
-      state     =   state,
-      output    =   output,
-      overflow  =   overflow,
-      metadata =    metadata
-    )
+    ) = StateMachine.Transition[I,O,Unit](state=state, output=output, overflow=overflow, metadata=metadata)
   }
 
-  type State[I,O]         = StateMachine.State[I,O,Unit]
+  type State[I,O]             = StateMachine.State[I,O,Unit]
   object State {
-    type Done[I,O]        = StateMachine.State.Done[I,O,Unit]
+    type Done[I,O]            = StateMachine.State.Done[I,O,Unit]
 
-    type Continue[I,O]    = StateMachine.State.Continue[I,O,Unit]
+    type Continuation[I,O]    = StateMachine.State.Continuation[I,O,Unit]
 
-    type Success[I,O]     = StateMachine.State.Success[I,O,Unit]
-    val Success           = StateMachine.State.Success
+    type Success[I,O]         = StateMachine.State.Success[I,O,Unit]
+    val Success               = StateMachine.State.Success
 
-    type Failure[I,O]     = StateMachine.State.Failure[I,O,Unit]
-    val Failure           = StateMachine.State.Failure
+    type Issue[I,O]           = StateMachine.State.Halted[I,O,Unit]
+    val Issue                 = StateMachine.State.Halted
   }
 
   object Continue {
     def apply[I,O](
-      state     :   State.Continue[I,O],
+      state     :   State.Continuation[I,O],
       output    :   Seq[O]                        = Seq.empty,
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = Result[I,O](
-      state     =   state,
-      output    =   output,
-      metadata  =   metadata
-    )
+    ) = StateMachine.Continue[I,O,Unit](state=state, output=output, metadata=metadata)
   }
 
-  object Success {
+  object Succeed {
     def apply[I,O](
       output    :   Seq[O]                        = Seq.empty,
       overflow  :   Seq[I]                        = Seq.empty,
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = Result[I,O](
-      state     =   State.Success(()),
-      output    =   output,
-      overflow  =   overflow,
-      metadata  =   metadata
-    )
+    ) = StateMachine.Succeed[I,O,Unit](value=(), output=output, overflow=overflow, metadata=metadata)
   }
 
-  object Failure {
+  object Halt {
     def apply[I,O](
-      optRecover  :   Option[() => Result[I,O]]   = None,
-      output      :   Seq[O]                      = Seq.empty,
-      overflow    :   Seq[I]                      = Seq.empty,
-      metadata    :   Seq[Any]                    = Seq.empty
-    ) = Result[I,O](
-      state     =   State.Failure(optRecover),
-      output    =   output,
-      overflow  =   overflow,
-      metadata  =   metadata
-    )
+      issues      :   Seq[Issue],
+      optRecover  :   Option[() => Transition[I,O]] = None,
+      output      :   Seq[O]                        = Seq.empty,
+      overflow    :   Seq[I]                        = Seq.empty,
+      metadata    :   Seq[Any]                      = Seq.empty
+    ) = StateMachine.Halt[I,O,Unit](issues=issues, optRecover=optRecover, output=output, overflow=overflow, metadata=metadata)
+    def warn[I,O](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      recover     :   () => Transition[I,O],
+      output      :   Seq[O]                       = Seq.empty,
+      overflow    :   Seq[I]                       = Seq.empty,
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = StateMachine.Halt[I,O,Unit](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+    def error[I,O](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      recover     :   () => Transition[I,O],
+      output      :   Seq[O]                       = Seq.empty,
+      overflow    :   Seq[I]                       = Seq.empty,
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = StateMachine.Halt[I,O,Unit](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+    def fatal[I,O](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      output      :   Seq[O]                       = Seq.empty,
+      overflow    :   Seq[I]                       = Seq.empty,
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = StateMachine.Halt[I,O,Unit](issues=Seq(Issue.fatal(message,cause)), output=output, overflow=overflow, metadata=metadata)
   }
 
     /*
@@ -98,11 +105,11 @@ package object Translator {
   F => set of final states (F ⊂ S)
   ∅ => 1) the type of the empty set 2) instance of the empty set
    */
-  type  S  [∑,Γ]   =   State                [∑,Γ]
-  type  F  [∑,Γ]   =   State.Done                 [∑,Γ]
-  type  ∂  [∑,Γ]   =   State.Continue             [∑,Γ]
-
-  val   ⊳          =   Continue
-  val   ⊡          =   Success
-  val   ⊠          =   Failure
+//  type  S  [∑,Γ]   =   State                [∑,Γ]
+//  type  F  [∑,Γ]   =   State.Done                 [∑,Γ]
+//  type  ∂  [∑,Γ]   =   State.Continue             [∑,Γ]
+//
+//  val   ⊳          =   Continue
+//  val   ⊡          =   Success
+//  val   ⊠          =   Issue
 }

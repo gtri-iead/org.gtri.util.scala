@@ -19,11 +19,11 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog.sideffects
+package org.gtri.util.scala.exelog
 
 object Helpers {
   def exitMessage[A](c : Class[_], methodName : String, retv : A) : String = {
-    c.getSimpleName + "." + methodName + " => " + retv.toString
+    c.getSimpleName + "." + methodName + " => " + formatArg(retv)
   }
 
   def enterMessage(c : Class[_], methodName: String, args: Seq[(String,Any)]) : String ={

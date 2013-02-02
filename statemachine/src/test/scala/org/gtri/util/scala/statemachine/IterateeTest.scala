@@ -15,7 +15,7 @@ class IterateeTest extends FunSpec {
       val sum = l.foldLeft(0) { _ + _ }
       val i : Iteratee[Int,Int] = TestSumIntIteratee()
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneResult(utility.applyInputToState(i.s0, l, false))
+      val result = utility.forceDoneTransition(utility.applyInputToState(i.s0, l, IssueRecoverStrategy.STRICT))
       val optSum : Option[Int] = result.toOption
       assert(optSum.isDefined && optSum.get == sum)
     }
@@ -29,7 +29,7 @@ class IterateeTest extends FunSpec {
       val i4 : Iteratee[Int,Int] = TestSumIntIteratee(10)
       val i5 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2;sum3 <- i3;sum4 <- i4) yield sum1 + sum2 + sum3 + sum4
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneResult(utility.applyInputToState(i5.s0, l, false))
+      val result = utility.forceDoneTransition(utility.applyInputToState(i5.s0, l, IssueRecoverStrategy.STRICT))
       val optSum : Option[Int] = result.toOption
       assert(optSum.isDefined && optSum.get == sum)
     }
@@ -43,16 +43,16 @@ class IterateeTest extends FunSpec {
       val i4 : Iteratee[Int,Int] = TestRecoverSumIntIteratee(10)
       val i5 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2;sum3 <- i3;sum4 <- i4) yield sum1 + sum2 + sum3 + sum4
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneResult(utility.applyInputToState(i5.s0, l, false))
+      val result = utility.forceDoneTransition(utility.applyInputToState(i5.s0, l, IssueRecoverStrategy.STRICT))
       val isRecover =
         result.state match {
-          case q : Iteratee.State.Continue[Int,Int] => false
-          case q : Iteratee.State.Failure[Int,Int] => q.optRecover.isDefined
+          case q : Iteratee.State.Continuation[Int,Int] => false
+          case q : Iteratee.State.Halted[Int,Int] => q.optRecover.isDefined
           case q: Iteratee.State.Success[Int,Int] => false
         }
       assert(isRecover == true && result.overflow == l.drop(5))
-      val result2 = utility.forceDoneResult(utility.applyInputToState(result.state, result.overflow, true))
-      val optSum : Option[Int] = result2.toOption(recover = true)
+      val result2 = utility.forceDoneTransition(utility.applyInputToState(result.state, result.overflow, shouldRecover = { (q: Iteratee.State.Halted[Int,Int]) => true }))
+      val optSum : Option[Int] = result2.toOption(shouldRecover = IssueRecoverStrategy.LAX)
       assert(optSum.isDefined && optSum.get == sum)
     }
     it("should accumulate metadata") {
@@ -61,7 +61,7 @@ class IterateeTest extends FunSpec {
       val sum = l.foldLeft(0) { _ + _ }
       val i : Iteratee[Int,Int] = TestSumIntIteratee()
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneResult(utility.applyInputToState(i.s0, l, false))
+      val result = utility.forceDoneTransition(utility.applyInputToState(i.s0, l, IssueRecoverStrategy.STRICT))
       assert(result.metadata.length == (n * 2) + 2)
     }
   }

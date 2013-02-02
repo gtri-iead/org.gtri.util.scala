@@ -41,16 +41,16 @@ class TraversableEnumeratorTest extends FunSpec {
       val result = state0.run()
       val isSuccess =
         result.state match {
-          case q : Enumerator.State.Continue[Int] => false
+          case q : Enumerator.State.Continuation[Int] => false
           case q : Enumerator.State.Success[Int] => true
-          case q : Enumerator.State.Failure[Int] => false
+          case q : Enumerator.State.Halted[Int] => false
         }
       // Just demo'ing a second way of doing this
       val isSuccess2 =
         result.state.fold(
-          ifContinue = { q => false },
+          ifContinuation = { q => false },
           ifSuccess = { q => true },
-          ifFailure = { q => false }
+          ifHalted = { q => false }
         )
       assert(isSuccess == true && isSuccess2 == true)
     }
@@ -62,9 +62,9 @@ class TraversableEnumeratorTest extends FunSpec {
       val result = utility.forceDoneState(state0)
       val isSuccess =
         result.state.fold(
-          ifContinue = { q => false },
+          ifContinuation = { q => false },
           ifSuccess = { q => true },
-          ifFailure = { q => false }
+          ifHalted = { q => false }
         )
       assert(isSuccess == true)
     }

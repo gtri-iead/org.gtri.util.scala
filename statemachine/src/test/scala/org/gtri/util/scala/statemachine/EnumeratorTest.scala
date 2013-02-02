@@ -52,19 +52,19 @@ class EnumeratorTest extends FunSpec {
       val result = e.run()
       val isRecover =
         result.state match {
-          case q : Enumerator.State.Continue[Int] => false
-          case q : Enumerator.State.Failure[Int] => q.optRecover.isDefined
+          case q : Enumerator.State.Continuation[Int] => false
+          case q : Enumerator.State.Halted[Int] => q.optRecover.isDefined
           case q: Enumerator.State.Success[Int] => false
         }
       assert(isRecover == true)
-      val result2 = result.state.run(recover = true)
+      val result2 = result.state.run(shouldRecover = { _ => true })
       assert(result.output ++ result2.output == l)
     }
     it("should accumulate metadata") {
       val n = STD_CHUNK_SIZE * 2
       val l : List[Int] = rnd.take(n).toList
       val e : Enumerator[Int] = TestRecoverEnumerator(l)
-      val result = e.run(recover = true)
+      val result = e.run(shouldRecover = { _ => true })
       assert(result.metadata.length == (n * 2) + ((n / 5) * 2))
     }
   }

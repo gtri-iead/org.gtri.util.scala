@@ -30,7 +30,7 @@ object TestIntToStringTranslator {
 case class TestIntToStringTranslator() extends Translator[Int, String] {
   import Translator._
   import TestIntToStringTranslator._
-  case class Cont() extends State.Continue[Int,String]  {
+  case class Cont() extends State.Continuation[Int,String]  {
 
     def apply(item: Int) = {
       val s : String = item.toString
@@ -41,7 +41,7 @@ case class TestIntToStringTranslator() extends Translator[Int, String] {
       )
     }
 
-    def apply(eoi : EndOfInput) = Success(
+    def apply(eoi : EndOfInput) = Succeed(
       metadata = Seq(log.info("info1"),log.info("info2"))
     )
   }

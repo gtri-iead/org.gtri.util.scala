@@ -94,3 +94,19 @@ Jan 29
 #1: Fixed Failure/Recover tests and code
 #2: Added Enumerable[O,A] -> StateMachine[Unit,O,A]
 #3: Added Progress to TraversableEnumerator
+
+Jan 31
+
+#1: When Failure occurs, the severity of the issue should be communicated to allow caller to decide whether to recover.
+ Additionally, having an error message that can be displayed to user if recover is not selected.
+#1a: May be better to bring the Issue class as a simple way of capturing user message + severity
+#1b: Since one of the severity codes is warning, Failure should be renamed
+#1ba: Stop? Err? Error? NoGo? Issue? Pause?
+
+Feb 1
+
+#1: Added IssueSeverityCode, IssueHandlingCode.
+#2: Renamed Result -> Transition
+#3: Renamed States/Results for clarity => Continue(Transition)/Continuation(State), Succeed(Transition)/Success(State)
+ and Halt(Transition)/Halted(State)
+#4: Added Issue. Halted now accepts a Seq[Issue]

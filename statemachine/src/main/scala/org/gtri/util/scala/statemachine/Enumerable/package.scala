@@ -21,72 +21,73 @@
 */
 package org.gtri.util.scala.statemachine
 
-import IssueSeverityCode._
+import org.gtri.util.scala.statemachine.IssueSeverityCode._
 
-package object Enumerator {
-  type Transition[O]        = StateMachine.Transition[Unit, O, Unit]
+package object Enumerable {
+  type Transition[O,A]          = StateMachine.Transition[Unit, O, A]
   object Transition {
-    def apply[O](
-      state     :   State[O],
+    def apply[O,A](
+      state     :   State[O,A],
       output    :   Seq[O]                    = Seq.empty,
       metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Transition[Unit,O,Unit](state=state, output=output, metadata=metadata)
+    ) = StateMachine.Transition[Unit,O,A](state=state, output=output, metadata=metadata)
   }
 
-  type State[O]             = StateMachine.State[Unit, O, Unit]
+  type State[O,A]             = StateMachine.State[Unit, O, A]
   object State {
-    type Continuation[O]    = StateMachine.State.Continuation[Unit, O, Unit]
-    type Done[O]            = StateMachine.State.Done[Unit, O, Unit]
+    type Continuation[O,A]    = StateMachine.State.Continuation[Unit, O, A]
+    type Done[O,A]            = StateMachine.State.Done[Unit, O, A]
 
-    type Success[O]         = StateMachine.State.Success[Unit, O, Unit]
-    val Success             = StateMachine.State.Success
+    type Success[O,A]         = StateMachine.State.Success[Unit, O, A]
+    val Success               = StateMachine.State.Success
 
-    type Halted[O]          = StateMachine.State.Halted[Unit, O, Unit]
-    val Halted              = StateMachine.State.Halted
+    type Halted[O,A]           = StateMachine.State.Halted[Unit, O, A]
+    val Halted                 = StateMachine.State.Halted
   }
 
   object Continue {
-    def apply[O](
-      state     :   State.Continuation[O],
+    def apply[O,A](
+      state     :   State.Continuation[O,A],
       output    :   Seq[O]                    = Seq.empty,
       metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Continue[Unit,O,Unit](state=state, output=output, metadata=metadata)
+    ) = StateMachine.Continue[Unit,O,A](state=state, output=output, metadata=metadata)
   }
 
   object Succeed {
-    def apply[O](
+    def apply[O,A](
+      value     :   A,
       output    :   Seq[O]                    = Seq.empty,
       metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Succeed[Unit,O,Unit](value=(), output=output, metadata=metadata)
+    ) = StateMachine.Succeed[Unit,O,A](value=value, output=output, metadata=metadata)
   }
 
   object Halt {
-    def apply[O](
+    def apply[O,A](
       issues      :   Seq[Issue],
-      optRecover  :   Option[() => Transition[O]]   = None,
+      optRecover  :   Option[() => Transition[O,A]] = None,
       output      :   Seq[O]                        = Seq.empty,
       metadata    :   Seq[Any]                      = Seq.empty    
-    ) = StateMachine.Halt[Unit,O,Unit](issues=issues, optRecover=optRecover, output=output, metadata=metadata) 
-    def warn[O](
+    ) = StateMachine.Halt[Unit,O,A](issues=issues, optRecover=optRecover, output=output, metadata=metadata) 
+    def warn[O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
-      recover     :   () => Transition[O],
+      recover     :   () => Transition[O,A],
       output      :   Seq[O]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,O,Unit](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, metadata=metadata)
-    def error[O](
+    ) = StateMachine.Halt[Unit,O,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, metadata=metadata)
+    def error[O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
-      recover     :   () => Transition[O],
+      recover     :   () => Transition[O,A],
       output      :   Seq[O]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,O,Unit](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, metadata=metadata)
-    def fatal[O](
+    ) = StateMachine.Halt[Unit,O,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, metadata=metadata)
+    def fatal[O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       output      :   Seq[O]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,O,Unit](issues=Seq(Issue.fatal(message,cause)), output=output, metadata=metadata)
+    ) = StateMachine.Halt[Unit,O,A](issues=Seq(Issue.fatal(message,cause)), output=output, metadata=metadata)
   }
 
   /*
@@ -96,11 +97,11 @@ package object Enumerator {
     ∂ => state that can be transitioned
     F => set of final states (F ⊂ S)
   */
-//  type  S  [Γ]  =  State                [Γ]
-//  type  F  [Γ]  =  State.Done           [Γ]
-//  type  ∂  [Γ]  =  State.Continue       [Γ]
+//  type  S  [Γ,A]   =   State                [Γ,A]
+//  type  F  [Γ,A]   =   State.Done           [Γ,A]
+//  type  ∂  [Γ,A]   =   State.Continue       [Γ,A]
 //
-//  val   ⊳       =  Continue
-//  val   ⊡       =  Success
-//  val   ⊠       =  Issue
+//  val   ⊳        =   Continue
+//  val   ⊡        =   Success
+//  val   ⊠        =   Issue
 }

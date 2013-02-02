@@ -29,7 +29,7 @@ object TestRecoverSumIntIteratee {
 case class TestRecoverSumIntIteratee(maxN : Int = Int.MaxValue) extends Iteratee[Int, Int] {
   import Iteratee._
   import TestRecoverSumIntIteratee._
-  case class Cont(n : Int, loopState : Int) extends State.Continue[Int, Int] {
+  case class Cont(n : Int, loopState : Int) extends State.Continuation[Int, Int] {
     def apply(item : Int) = {
       if(n < maxN) {
         val r = Continue(
@@ -37,22 +37,23 @@ case class TestRecoverSumIntIteratee(maxN : Int = Int.MaxValue) extends Iteratee
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
         if(n % 5 == 0) {
-          Failure(
-            optRecover = Some(()=> r),
+          Halt.error(
+            message = "error",
+            recover = ()=> r,
             metadata = Seq(log.info("info1"),log.info("info2"))
           )
         } else {
           r
         }
       } else {
-        Success(
+        Succeed(
           value = loopState + item,
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
       }
     }
 
-    def apply(eoi : EndOfInput) = Success(
+    def apply(eoi : EndOfInput) = Succeed(
       value = loopState,
       metadata = Seq(log.info("info1"),log.info("info2"))
     )

@@ -19,10 +19,10 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog.sideffects
+package org.gtri.util.scala.exelog.nosideeffects
 
-final class Log4jLogger {
-  @inline def getLog(c: Class[_]) = new Log4jLog(c.getSimpleName, c.getPackage.getName)
+final class MemoryLogger {
+  @inline def getLog(c: Class[_ <: AnyRef]) = new MemoryLog(c.getSimpleName, c.getPackage.getName)
 
-  @inline def getLog(name: String, parentName : String) = new Log4jLog(name, parentName)
+  @inline def getLog(name: String, parentName : String) = new MemoryLog(name, parentName)
 }

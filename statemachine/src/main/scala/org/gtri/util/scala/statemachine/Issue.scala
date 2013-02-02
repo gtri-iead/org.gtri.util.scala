@@ -19,11 +19,22 @@
     along with org.gtri.util.scala.statemachine library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.statemachine.Enumerator
+package org.gtri.util.scala.statemachine
 
-case class Progress(n : Int, maxN : Int) {
-  def percentComplete = (n.toDouble / maxN.toDouble) * 100.0
-}
-object Progress {
-  val empty = Progress(0,0)
+import IssueSeverityCode._
+
+case class Issue(
+  severityCode    :   IssueSeverityCode,
+  message         :   String,
+  cause           :   Option[Throwable] = None
+)
+
+object Issue {
+  def warn(message : String, cause : Option[Throwable] = None) = Issue(WARN, message, cause)
+  def error(message : String, cause : Option[Throwable] = None) = Issue(ERROR, message, cause)
+  def fatal(message : String, cause : Option[Throwable] = None) = Issue(FATAL, message, cause)
+
+//  implicit object IssueOrdering extends Ordering[Issue] {
+//    def compare(x: Issue, y: Issue) = x.severityCode compare y.severityCode
+//  }
 }

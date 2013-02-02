@@ -1,11 +1,10 @@
 package org.gtri.util.scala.exelog
 
-package object sideffects {
-  type Logger = Log4jLogger
+package object nosideeffects {
   type Log = Log4jLog
-  implicit val logger = new Logger
+  implicit val Logger = new Log4jLogger
 
-  implicit class logMethods(self: Log)(implicit c : Class[_]) {
+  implicit class logMethods(self: Log)(implicit c : Class[_ <: AnyRef]) {
     @inline def block[A](methodName: String)(f: => A) : A = block(methodName, Nil)(f)
     def block[A](methodName: String, args : => Seq[(String,Any)])(f: => A) : A = {
       begin(methodName, args)

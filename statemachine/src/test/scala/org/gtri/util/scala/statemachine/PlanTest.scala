@@ -62,12 +62,12 @@ class PlanTest extends FunSpec {
       val result = ei.run()
       val isRecover =
         result.state match {
-          case q : Plan.State.Continue[Int] => false
-          case q : Plan.State.Failure[Int] => q.optRecover.isDefined
+          case q : Plan.State.Continuation[Int] => false
+          case q : Plan.State.Halted[Int] => q.optRecover.isDefined
           case q: Plan.State.Success[Int] => false
         }
       assert(isRecover == true)
-      val result2 = result.state.run(recover = true)
+      val result2 = result.state.run(shouldRecover = IssueRecoverStrategy.LAX)
       val opt = result2.toOption
       assert(opt.isDefined && opt.get == sum)
     }
@@ -79,7 +79,7 @@ class PlanTest extends FunSpec {
       val t : Translator[Int,String] = TestIntToStringTranslator()  // (n * 2) + 2
       val i : Iteratee[String,String] = TestAppendStringIteratee() // (n * 2) + 2
       val eit : Plan[String] = e compose t compose i
-      val result = eit.run(recover = true)
+      val result = eit.run(shouldRecover = { _ => true })
       val eMetadataCount = (n * 2) + ((n/5)*2)
       val tMetadataCount = (n * 2) + 2
       val iMetadataCount = (n * 2) + 2

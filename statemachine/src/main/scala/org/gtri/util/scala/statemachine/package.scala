@@ -22,6 +22,7 @@
 package org.gtri.util.scala
 
 import org.gtri.util.scala.statemachine.StateMachine._
+import org.gtri.util.scala.statemachine.IssueSeverityCode._
 
 package object statemachine {
   val STD_CHUNK_SIZE = 256
@@ -43,9 +44,9 @@ package object statemachine {
     def toEnumerator(chunkSize : Int) = utility.TraversableEnumerator(self, chunkSize)
   }
 
-  implicit class implicitStateMachineResultOps[I,O,A](self : Result[I,O,A]) {
+  implicit class implicitStateMachineResultOps[I,O,A](self : Transition[I,O,A]) {
     def toOption : Option[A] = self.state.toOption
-    def toOption(recover : Boolean) : Option[A] = self.state.toOption(recover)
+    def toOption(shouldRecover: State.Halted[I,O,A] => Boolean) : Option[A] = self.state.toOption(shouldRecover)
   }
 
   implicit class implicitStateMachineStateOps[I,O,A](self: State[I,O,A]) {
@@ -53,21 +54,21 @@ package object statemachine {
     def toOption : Option[A] = {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
-        case q : State.Failure[I,O,A] => None
-        case q : State.Continue[I,O,A] => None
+        case q : State.Halted[I,O,A] => None
+        case q : State.Continuation[I,O,A] => None
       }
     }
-    def toOption(recover : Boolean) : Option[A] = {
+    def toOption(shouldRecover: State.Halted[I,O,A] => Boolean) : Option[A] = {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
-        case q : State.Failure[I,O,A] =>
-          if(recover && q.optRecover.isDefined) {
+        case q : State.Halted[I,O,A] =>
+          if(shouldRecover(q) && q.optRecover.isDefined) {
             val r = q.optRecover.get()
             r.toOption
           } else {
             None
           }
-        case q : State.Continue[I,O,A] => None
+        case q : State.Continuation[I,O,A] => None
       }
     }
   }
@@ -78,11 +79,11 @@ package object statemachine {
 
   implicit class implicitEnumerableStateOps[O,A](self: Enumerable.State[O,A]) {
     def step() = Enumerable.impl.stepEnumerableState(self)
-    def run(recover : Boolean = false) = Enumerable.impl.runEnumerableState(self, recover)
+    def run(shouldRecover: Enumerable.State.Halted[O,A] => Boolean = IssueRecoverStrategy.NORMAL) = Enumerable.impl.runEnumerableState(self, shouldRecover)
   }
 
   implicit class implicitEnumerableStateMachineOps[O,A](self: Enumerable[O,A]) {
-    def run(recover : Boolean = false) = Enumerable.impl.runEnumerableState(self.s0, recover)
+    def run(shouldRecover: Enumerable.State.Halted[O,A] => Boolean = IssueRecoverStrategy.NORMAL) = Enumerable.impl.runEnumerableState(self.s0, shouldRecover)
   }
 
   implicit class implicitIterateeStateOps[I,A](self: Iteratee.State[I,A]) {

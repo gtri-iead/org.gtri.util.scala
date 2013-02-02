@@ -21,12 +21,15 @@
 */
 package org.gtri.util.scala.statemachine
 
+import org.gtri.util.scala.statemachine.IssueSeverityCode._
+
 trait StateMachine[I,O,A] {
   import StateMachine._
   def s0 : State[I,O,A]
 }
 object StateMachine {
-  case class Result[I,O,A](
+
+  case class Transition[I,O,A](
     state         :   State[I,O,A],
     output        :   Seq[O]                        = Seq.empty,
     overflow      :   Seq[I]                        = Seq.empty,
@@ -35,10 +38,10 @@ object StateMachine {
 
   object Continue {
     def apply[I,O,A](
-      state       :   State.Continue[I,O,A],
+      state       :   State.Continuation[I,O,A],
       output      :   Seq[O]                        = Seq.empty,
       metadata    :   Seq[Any]                      = Seq.empty
-    ) = Result[I,O,A](
+    ) = Transition[I,O,A](
       state     =   state,
       output    =   output,
       overflow  =   Seq.empty,
@@ -46,13 +49,13 @@ object StateMachine {
     )
   }
 
-  object Success {
+  object Succeed {
     def apply[I,O,A](
       value       :   A,
       output      :   Seq[O]                        = Seq.empty,
       overflow    :   Seq[I]                        = Seq.empty,
       metadata    :   Seq[Any]                      = Seq.empty
-    ) = Result[I,O,A](
+    ) = Transition[I,O,A](
       state     =   State.Success(value),
       output    =   output,
       overflow  =   overflow,
@@ -60,14 +63,18 @@ object StateMachine {
     )
   }
 
-  object Failure {
+  object Halt {
     def apply[I,O,A](
-      optRecover  :   Option[() => Result[I,O,A]],
-      output      :   Seq[O]                        = Seq.empty,
-      overflow    :   Seq[I]                        = Seq.empty,
-      metadata    :   Seq[Any]                      = Seq.empty
-    ) = Result[I,O,A](
-      state     =   State.Failure(optRecover),
+      issues      :   Seq[Issue],
+      optRecover  :   Option[() => Transition[I,O,A]]   = None,
+      output      :   Seq[O]                            = Seq.empty,
+      overflow    :   Seq[I]                            = Seq.empty,
+      metadata    :   Seq[Any]                          = Seq.empty
+    ) = Transition[I,O,A](
+      state     =   State.Halted(
+        issues        =   issues,
+        optRecover    =   optRecover
+      ),
       output    =   output,
       overflow  =   overflow,
       metadata  =   metadata
@@ -78,9 +85,9 @@ object StateMachine {
 
     // Better performing alternative to using match statement
     def fold[X](
-      ifContinue  : State.Continue  [I,O,A] => X,
-      ifSuccess   : State.Success   [I,O,A] => X,
-      ifFailure   : State.Failure   [I,O,A] => X
+      ifContinuation  : State.Continuation  [I,O,A] => X,
+      ifSuccess       : State.Success       [I,O,A] => X,
+      ifHalted        : State.Halted        [I,O,A] => X
     ) : X
   }
 
@@ -88,51 +95,55 @@ object StateMachine {
     sealed trait Done[I,O,A] extends State[I,O,A] {
       // Better performing alternative to using match statement
       def fold[X](
-        ifSuccess   : State.Success [I,O,A]  => X,
-        ifFailure   : State.Failure [I,O,A]  => X
+        ifSuccess     : State.Success  [I,O,A]  => X,
+        ifHalted      : State.Halted   [I,O,A]  => X
       ) : X
     }
 
-    abstract class Continue[I,O,A] extends State[I,O,A] {
+    abstract class Continuation[I,O,A] extends State[I,O,A] {
 
-      def apply( xs  : Seq[I]     ) : Result[I,O,A] = utility.applyInputToState(this, xs, false)
-      def apply( x   : I          ) : Result[I,O,A]
-      def apply( x   : EndOfInput ) : Result[I,O,A]
+      def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applyInputToState(this, xs, IssueRecoverStrategy.STRICT)
+      def apply( x   : I          ) : Transition[I,O,A]
+      def apply( x   : EndOfInput ) : Transition[I,O,A]
 
       final def fold[X](
-        ifContinue  : State.Continue  [I,O,A] => X,
-        ifSuccess   : State.Success   [I,O,A] => X,
-        ifFailure   : State.Failure   [I,O,A] => X
-      ) = ifContinue(this)
+        ifContinuation  : State.Continuation  [I,O,A] => X,
+        ifSuccess       : State.Success       [I,O,A] => X,
+        ifHalted        : State.Halted        [I,O,A] => X
+      ) = ifContinuation(this)
 
     }
 
     final case class Success[I,O,A](value : A) extends Done[I,O,A] {
 
       def fold[X](
-        ifContinue  : State.Continue  [I,O,A] => X,
-        ifSuccess   : State.Success   [I,O,A] => X,
-        ifFailure   : State.Failure   [I,O,A] => X
+        ifContinuation  : State.Continuation  [I,O,A] => X,
+        ifSuccess       : State.Success       [I,O,A] => X,
+        ifHalted        : State.Halted        [I,O,A] => X
       ) = ifSuccess(this)
 
       def fold[X](
-        ifSuccess   : State.Success [I,O,A]  => X,
-        ifFailure   : State.Failure [I,O,A]  => X
+        ifSuccess     : State.Success [I,O,A]  => X,
+        ifHalted      : State.Halted  [I,O,A]  => X
       ) = ifSuccess(this)
     }
 
-    final case class Failure[I,O,A](optRecover : Option[() => Result[I,O,A]] = None) extends Done[I,O,A] {
+    final case class Halted[I,O,A](
+      issues          :   Seq[Issue],
+      optRecover      :   Option[() => Transition[I,O,A]] = None
+    ) extends Done[I,O,A] {
       def fold[X](
-        ifContinue  : State.Continue  [I,O,A] => X,
-        ifSuccess   : State.Success   [I,O,A] => X,
-        ifFailure   : State.Failure   [I,O,A] => X
-      ) = ifFailure(this)
+        ifContinuation  : State.Continuation  [I,O,A] => X,
+        ifSuccess       : State.Success       [I,O,A] => X,
+        ifHalted        : State.Halted        [I,O,A] => X
+      ) = ifHalted(this)
 
       def fold[X](
-        ifSuccess   : State.Success [I,O,A]  => X,
-        ifFailure   : State.Failure [I,O,A]  => X
-      ) = ifFailure(this)
+        ifSuccess     : State.Success    [I,O,A]  => X,
+        ifHalted      : State.Halted     [I,O,A]  => X
+      ) = ifHalted(this)
 
+      lazy val severityCode = issues.maxBy({ _.severityCode }).severityCode
     }
   }
 
@@ -146,11 +157,11 @@ object StateMachine {
   ∅ => 1) the type of the empty set 2) instance of the empty set
   EOI => 1) type of end of input 2) instance of end of input
    */
-  type  S  [∑,Γ,A]   =   State                [∑,Γ,A]
-  type  F  [∑,Γ,A]   =   State.Done           [∑,Γ,A]
-  type  ∂  [∑,Γ,A]   =   State.Continue       [∑,Γ,A]
-
-  val   ⊳            =   Continue
-  val   ⊡            =   Success
-  val   ⊠            =   Failure
+//  type  S  [∑,Γ,A]   =   State                [∑,Γ,A]
+//  type  F  [∑,Γ,A]   =   State.Done           [∑,Γ,A]
+//  type  ∂  [∑,Γ,A]   =   State.Continuation       [∑,Γ,A]
+//
+//  val   ⊳            =   Continue
+//  val   ⊡            =   Success
+//  val   ⊠            =   Issue
 }

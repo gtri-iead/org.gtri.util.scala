@@ -19,57 +19,58 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog.sideeffects
+package org.gtri.util.scala.exelog.nosideeffects
 
-import org.apache.log4j
-import org.apache.log4j.Level
-import org.apache.log4j.Level._
-import org.gtri.util.scala.exelog
-import exelog.{LogLevel, LogRecord}
+import org.gtri.util.scala.exelog._
+import org.gtri.util.scala.exelog.LogLevel._
 
-final class Log4jLog(
-  val name : String,
-  val parentName : String
+final class MemoryLog(
+  name : String,
+  parentName : String,
+  var log : List[LogRecord] = Nil
 ) {
-
   val fqcn = parentName + "." + name
-  val log = log4j.Logger.getLogger(fqcn)
 
-  @inline def tryLog(level : Level, message: => String) {
-    if(log.isEnabledFor(level)) {
-      log.log(fqcn, level, message, null)
-    }
+  @inline def log(level : LogLevel, message : String) = {
+    log ::= LogRecord(
+      level               =   level,
+      loggerName          =   fqcn,
+      message             =   message
+    )
   }
 
-  @inline def tryLog(level : Level, message: => String, cause : Throwable) {
-    if(log.isEnabledFor(level)) {
-      log.log(fqcn, level, message, cause)
-    }
+  @inline def log(level : LogLevel, message : String, cause : Throwable) = {
+    log ::= LogRecord(
+      level               =   level,
+      loggerName          =   fqcn,
+      message             =   message,
+      optThrown           =   Some(cause)
+    )
   }
 
-  @inline def trace(message: => String) = tryLog(TRACE, message)
+  @inline def trace(message: => String) = log(TRACE, message)
 
-  @inline def debug(message: => String) = tryLog(DEBUG, message)
+  @inline def debug(message: => String) = log(DEBUG, message)
 
-  @inline def info(message: => String) = tryLog(INFO, message)
+  @inline def info(message: => String) = log(INFO, message)
 
-  @inline def warn(message: => String) = tryLog(WARN, message)
+  @inline def warn(message: => String) = log(WARN, message)
 
-  @inline def warn(cause: Throwable) = tryLog(WARN, cause.getMessage, cause)
+  @inline def warn(cause: Throwable) = log(WARN, cause.getMessage, cause)
 
-  @inline def warn(message: => String, cause: Throwable) = tryLog(WARN, message, cause)
+  @inline def warn(message: => String, cause: Throwable) = log(WARN, message, cause)
 
-  @inline def error(message: => String) = tryLog(ERROR, message)
+  @inline def error(message: => String) = log(ERROR, message)
 
-  @inline def error(cause: Throwable) = tryLog(ERROR, cause.getMessage, cause)
+  @inline def error(cause: Throwable) = log(ERROR, cause.getMessage, cause)
 
-  @inline def error(message: => String, cause: Throwable) = tryLog(ERROR, message, cause)
+  @inline def error(message: => String, cause: Throwable) = log(ERROR, message, cause)
 
-  @inline def fatal(message: => String) = tryLog(FATAL,message)
+  @inline def fatal(message: => String) = log(FATAL,message)
 
-  @inline def fatal(cause: Throwable) = tryLog(FATAL, cause.getMessage, cause)
+  @inline def fatal(cause: Throwable) = log(FATAL, cause.getMessage, cause)
 
-  @inline def fatal(message: => String, cause: Throwable) = tryLog(FATAL, message, cause)
+  @inline def fatal(message: => String, cause: Throwable) = log(FATAL, message, cause)
 
   @inline def log(r: LogRecord) {
       r.level match {
@@ -97,4 +98,5 @@ final class Log4jLog(
         case _ => // noop
       }
   }
+
 }
