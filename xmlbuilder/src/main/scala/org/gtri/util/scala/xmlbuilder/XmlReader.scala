@@ -3,40 +3,48 @@
 
     Author: lance.gatlin@gtri.gatech.edu
 
-    This file is part of org.gtri.util.xmlbuilder library.
+    This file is part of org.gtri.util.scala.xmlbuilder library.
 
-    org.gtri.util.xmlbuilder library is free software: you can redistribute it and/or modify
+    org.gtri.util.scala.xmlbuilder library is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    org.gtri.util.xmlbuilder library is distributed in the hope that it will be useful,
+    org.gtri.util.scala.xmlbuilder library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with org.gtri.util.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
+    along with org.gtri.util.scala.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
 package org.gtri.util.scala.xmlbuilder
 
-import javax.xml.stream.{XMLStreamConstants, XMLStreamReader}
+import javax.xml.stream.{XMLInputFactory, XMLStreamConstants, XMLStreamReader}
 import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.scala.statemachine._
+import java.io.InputStream
 import annotation.tailrec
 
 
 object XmlReader {
-  implicit val thisclass =  classOf[XmlReader]
-  implicit val log =        Logger.getLog(thisclass)
+  implicit val thisclass  =   classOf[XmlReader]
+  implicit val log        =   Logger.getLog(thisclass)
+
+  def apply(in : InputStream, chunkSize : Int = STD_CHUNK_SIZE) =
+    XmlReader(
+      reader = XMLInputFactory.newInstance().createXMLStreamReader(in),
+      totalByteSize = in.available(),
+      chunkSize = chunkSize
+    )
 }
-class XmlReader(
+case class XmlReader(
   reader              :   XMLStreamReader,
   val totalByteSize   :   Int               = 0,
-  val chunkSize       :   Int               = 256
+  val chunkSize       :   Int               = STD_CHUNK_SIZE
 ) extends Enumerator[XmlEvent] {
   import XmlReader._
   import Enumerator._
@@ -64,7 +72,7 @@ class XmlReader(
     }
   }
 
-  case class Cont(totalByteSize : Int) extends State.Continue[XmlEvent] {
+  case class Cont(totalByteSize : Int) extends State.Continuation[XmlEvent] {
 
     def apply(x : Unit) = {
       log.block("apply") {
@@ -101,7 +109,7 @@ class XmlReader(
         if(buffer.isEmpty) {
           +s"Buffer is empty - close reader and return Success"
           reader.close()
-          Success(
+          Succeed(
             output = Seq(EndXmlDocumentEvent(getLocatorFromReader)),
             metadata = Seq(nextProgress)
           )
@@ -114,6 +122,11 @@ class XmlReader(
           )
         }
       }
+    }
+
+    def apply(eoi : EndOfInput) = {
+      reader.close()
+      Succeed()
     }
 
     private def nextEvents() : List[XmlEvent] = {
@@ -283,6 +296,7 @@ class XmlReader(
               (s,event) =>
                 event match {
                   case AddXmlTextEvent(text,_) => s.append(text)
+                  case _ => s
                 }
             }
             val retv = (Some(result.toString), events)

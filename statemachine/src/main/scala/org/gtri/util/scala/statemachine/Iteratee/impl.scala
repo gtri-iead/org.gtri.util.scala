@@ -49,18 +49,20 @@ object impl {
    */
   def bindIterateeState[I,A](value : A) : State[I,A] = State.Success(value)
 
-  private[impl] def flatMapIterateeResult[I,A,B](r : Transition[I,A], f: A => State[I,B]) : Transition[I,B] = {
+  private[impl] def flatMapIterateeTransition[I,A,B](r : Transition[I,A], f: A => State[I,B]) : Transition[I,B] = {
     r.state.fold(
-      ifContinuation = { q => Transition(
-        state = FlatMapIterateeStateContinue(q,f),
-        metadata = r.metadata
-      )},
+      ifContinuation = { q =>
+        Transition(
+          state = FlatMapIterateeContinuation(q,f),
+          metadata = r.metadata
+        )
+      },
       ifSuccess = { q =>
-        val overflowResult = utility.applyInputToState(f(q.value),r.overflow,IssueRecoverStrategy.STRICT)
-        overflowResult.copy(metadata = overflowResult.metadata ++ r.metadata)
+        val transition = utility.applyInputToState(f(q.value),r.overflow,IssueRecoverStrategy.STRICT)
+        transition.copy(metadata = transition.metadata ++ r.metadata)
       },
       ifHalted = { q =>
-        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeResult[I,A,B](recover(), f) }
+        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeTransition[I,A,B](recover(), f) }
         Transition(
           state = State.Halted(
             issues = q.issues,
@@ -73,16 +75,18 @@ object impl {
     )
   }
 
-  private[impl] case class FlatMapIterateeStateContinue[I,A,B](s : State.Continuation[I,A], f: A => State[I,B]) extends State.Continuation[I,B] {
-    override def apply(xs: Seq[I]) = flatMapIterateeResult(s.apply(xs),f)
+  //This case class used instead of anonymous class for better debug messages
+  private[impl] case class FlatMapIterateeContinuation[I,A,B](s : State.Continuation[I,A], f: A => State[I,B]) extends State.Continuation[I,B] {
+    override def apply(xs: Seq[I]) = flatMapIterateeTransition(s.apply(xs),f)
   
-    def apply(x: I) = flatMapIterateeResult(s.apply(x),f)
+    def apply(x: I) = flatMapIterateeTransition(s.apply(x),f)
   
-    def apply(x: EndOfInput) = flatMapIterateeResult(s.apply(x),f)
+    def apply(x: EndOfInput) = flatMapIterateeTransition(s.apply(x),f)
   }
 
   /**
-   * Implementation of Iteratee.flatMap
+   * Implementation of Iteratee.flatMap that allows extracting the final value, connects the overflow of the outer
+   * Iteratee to the inner Iteratee, accumulates metadata and composes Halted states.
    * @param s
    * @param f
    * @tparam I
@@ -92,10 +96,16 @@ object impl {
    */
   def flatMapIterateeState[I,A,B](s : State[I,A], f: A => State[I,B]) : State[I,B] = {
     s.fold(
-      ifContinuation = { q => FlatMapIterateeStateContinue(q,f) },
-      ifSuccess = { q => f(q.value) },
+      ifContinuation = { q =>
+        FlatMapIterateeContinuation(q,f)
+      },
+      ifSuccess = { q =>
+        // Note: if s is initially Success, there is no way to connect the overflow from the final Transition to the inner Iteratee
+        // Note: connecting overflow is correctly handled by FlatMapIterateeContinuation
+        f(q.value)
+      },
       ifHalted = { q =>
-        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeResult[I,A,B](recover(),f) }
+        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeTransition[I,A,B](recover(),f) }
         State.Halted(
           issues = q.issues,
           optRecover = optRecover
@@ -106,7 +116,7 @@ object impl {
 
   
   /**
-   * Implementation of Iteratee.map
+   * Implementation of Iteratee.map in terms of flatMap/bind
    * @param m
    * @param f
    * @tparam I
@@ -129,6 +139,7 @@ object impl {
     def s0 = bindIterateeState(value)
   }
 
+  //This case class used instead of anonymous class for better debug messages
   private[impl] case class FlatMapIteratee[I,A,B](m : Iteratee[I,A], f: A => Iteratee[I,B]) extends Iteratee[I,B] {
     def s0 = flatMapIterateeState(m.s0, { (a : A) => f(a).s0 })
   }

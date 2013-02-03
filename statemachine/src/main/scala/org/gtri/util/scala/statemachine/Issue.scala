@@ -30,6 +30,8 @@ case class Issue(
 )
 
 object Issue {
+  def debug(message : String, cause : Option[Throwable] = None) = Issue(DEBUG, message, cause)
+  def info(message : String, cause : Option[Throwable] = None) = Issue(INFO, message, cause)
   def warn(message : String, cause : Option[Throwable] = None) = Issue(WARN, message, cause)
   def error(message : String, cause : Option[Throwable] = None) = Issue(ERROR, message, cause)
   def fatal(message : String, cause : Option[Throwable] = None) = Issue(FATAL, message, cause)

@@ -28,7 +28,7 @@ import org.gtri.util.scala.statemachine.IssueSeverityCode._
 object impl {
   private[impl] def stepEnumerableTransition[O,A](current: Transition[O,A]) : Transition[O,A] = {
     current.state.fold(
-      ifContinuation = { q => utility.foldTransition(current,q(())) },
+      ifContinuation = { q => utility.accumulateTransitions(current,q(())) },
       ifSuccess = { _ => current },
       ifHalted = { _ => current }
     )
@@ -63,11 +63,18 @@ object impl {
     val r = utility.TransitionAccumulator(r0)
     do {
       r.state.fold(
-        ifContinuation = { q => r.append(q(())) },
-        ifSuccess = { q => done = true },
+        ifContinuation = { q =>
+          // Accumulate transition from applying unit to continuation
+          r.accumulate(q(()))
+        },
+        ifSuccess = { q =>
+          done = true
+        },
         ifHalted = { q =>
-          if(shouldRecover(q) && q.optRecover.isDefined) {
-            r.append(q.optRecover.get.apply())
+          // If state we can be and should be recovered
+          if(q.optRecover.isDefined && shouldRecover(q)) {
+            // Accumulate transition from recover
+            r.accumulate(q.optRecover.get.apply())
           } else {
             done = true
           }

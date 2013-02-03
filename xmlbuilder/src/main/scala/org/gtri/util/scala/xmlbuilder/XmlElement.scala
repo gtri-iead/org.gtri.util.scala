@@ -3,20 +3,20 @@
 
     Author: lance.gatlin@gtri.gatech.edu
 
-    This file is part of org.gtri.util.xmlbuilder library.
+    This file is part of org.gtri.util.scala.xmlbuilder library.
 
-    org.gtri.util.xmlbuilder library is free software: you can redistribute it and/or modify
+    org.gtri.util.scala.xmlbuilder library is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    org.gtri.util.xmlbuilder library is distributed in the hope that it will be useful,
+    org.gtri.util.scala.xmlbuilder library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with org.gtri.util.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
+    along with org.gtri.util.scala.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
 
 */
 package org.gtri.util.scala.xmlbuilder
@@ -33,19 +33,54 @@ object XmlElement {
   implicit val log : Log =    Logger.getLog(thisclass)
 
   case class Metadata(
-    optRawAttributesOrder:    Option[Seq[String]] = None, // Note: this includes xmlns:XXX
-    optAttributesOrder:       Option[Seq[XsdQName]] = None, // This does *not* include xmlns
-    optPrefixesOrder:         Option[Seq[XsdNCName]] = None,
-    optLocator :              Option[DiagnosticLocator] = None
+    optRawAttributesOrder   :   Option[Seq[String]]         = None, // Note: this includes xmlns:XXX
+    optAttributesOrder      :   Option[Seq[XsdQName]]       = None, // This does *not* include xmlns
+    optPrefixesOrder        :   Option[Seq[XsdNCName]]      = None,
+    optLocator              :   Option[DiagnosticLocator]   = None
   )
 
   def apply(
-    qName :            XsdQName,
-    value :            Option[String],
-    attributes :       Seq[(XsdQName, String)],
-    prefixes :         Seq[(XsdNCName, XsdAnyURI)],
-    optLocator :       Option[DiagnosticLocator] = None,
-    optRawAttributes : Option[Seq[(String,String)]] = None
+    qName                   :   XsdQName,
+    value                   :   Option[String],
+    attributes              :   Seq[(XsdQName, String)],
+    prefixes                :   Seq[(XsdNCName, XsdAnyURI)]
+  ) = new XmlElement(
+    qName,
+    value,
+    attributes.toMap,
+    prefixes.toMap,
+    Some(Metadata(
+      optRawAttributesOrder =   None,
+      optAttributesOrder    =   Some(attributes map { _._1 }),
+      optPrefixesOrder      =   Some(prefixes map { _._1 }),
+      optLocator            =   None
+    ))
+  )
+  def apply(
+    qName                   :   XsdQName,
+    value                   :   Option[String],
+    attributes              :   Seq[(XsdQName, String)],
+    prefixes                :   Seq[(XsdNCName, XsdAnyURI)],
+    optLocator              :   Option[DiagnosticLocator]
+  ) = new XmlElement(
+    qName,
+    value,
+    attributes.toMap,
+    prefixes.toMap,
+    Some(Metadata(
+      optRawAttributesOrder =  None,
+      optAttributesOrder    =  Some(attributes map { _._1 }),
+      optPrefixesOrder      =  Some(prefixes map { _._1 }),
+      optLocator            =  optLocator
+    ))
+  )
+  def apply(
+    qName                   :   XsdQName,
+    value                   :   Option[String],
+    attributes              :   Seq[(XsdQName, String)],
+    prefixes                :   Seq[(XsdNCName, XsdAnyURI)],
+    optLocator              :   Option[DiagnosticLocator],
+    optRawAttributes        :   Option[Seq[(String,String)]]
   ) = new XmlElement(
     qName,
     value,
@@ -53,18 +88,18 @@ object XmlElement {
     prefixes.toMap,
     Some(Metadata(
       optRawAttributesOrder =  optRawAttributes map { _ map { _._1 } },
-      optAttributesOrder =     Some(attributes map { _._1 }),
-      optPrefixesOrder =       Some(prefixes map { _._1 }),
-      optLocator =             optLocator
+      optAttributesOrder    =  Some(attributes map { _._1 }),
+      optPrefixesOrder      =  Some(prefixes map { _._1 }),
+      optLocator            =  optLocator
     ))
   )
 }
 case class XmlElement(
-  qName :                     XsdQName,
-  value :                     Option[String],
-  attributesMap :             Map[XsdQName, String],
-  prefixToNamespaceURIMap :   Map[XsdNCName, XsdAnyURI],
-  metadata :                  Option[Metadata] = None
+  qName                     :  XsdQName,
+  value                     :  Option[String],
+  attributesMap             :  Map[XsdQName, String],
+  prefixToNamespaceURIMap   :  Map[XsdNCName, XsdAnyURI],
+  metadata                  :  Option[Metadata]             = None
 )extends NamespaceURIToPrefixResolver {
   import XmlElement._
 

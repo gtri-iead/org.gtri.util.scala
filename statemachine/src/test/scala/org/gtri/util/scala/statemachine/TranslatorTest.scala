@@ -24,6 +24,7 @@ package org.gtri.util.scala.statemachine
 import org.scalatest.FunSpec
 import scala.util.Random
 import test._
+import collection.immutable.NumericRange
 
 class TranslatorTest extends FunSpec {
   val rnd = Stream.continually(Random.nextInt(100))
@@ -63,5 +64,14 @@ class TranslatorTest extends FunSpec {
       val tMetadataCount = (n * 2) + 2
       assert(result.metadata.length == (eMetadataCount + tMetadataCount))
     }
+    it("should accumulate Transitions in the correct order") {
+      val abc = 'a' to 'z' map { _.toString }
+      val cba = 'z'.toByte to 'a'.toByte by -1 map { _.toChar.toString }
+      val tr : Translator[String,String] = TestAlphaTranslator()
+      // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
+      val result : Translator.Transition[String,String] = utility.applyInputToState(tr.s0, abc.toList, IssueRecoverStrategy.STRICT)
+      assert(result.output == cba)
+    }
+
   }
 }

@@ -23,7 +23,7 @@ package org.gtri.util.scala.statemachine
 
 object IssueSeverityCode extends Enumeration {
   type IssueSeverityCode = Value
-  val WARN, ERROR, FATAL = Value
+  val DEBUG, INFO, WARN, ERROR, FATAL = Value
 }
 
 

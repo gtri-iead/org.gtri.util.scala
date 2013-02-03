@@ -3,39 +3,41 @@
 
     Author: lance.gatlin@gtri.gatech.edu
 
-    This file is part of org.gtri.util.xmlbuilder library.
+    This file is part of org.gtri.util.scala.xmlbuilder library.
 
-    org.gtri.util.xmlbuilder library is free software: you can redistribute it and/or modify
+    org.gtri.util.scala.xmlbuilder library is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    org.gtri.util.xmlbuilder library is distributed in the hope that it will be useful,
+    org.gtri.util.scala.xmlbuilder library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with org.gtri.util.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
+    along with org.gtri.util.scala.xmlbuilder library. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
 package org.gtri.util.scala.xmlbuilder
 
 import annotation.tailrec
-import javax.xml.stream.XMLStreamWriter
+import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import javax.xml.XMLConstants
 import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
 import org.gtri.util.scala.statemachine._
+import java.io.OutputStream
 
 object XmlWriter {
   implicit val thisclass =  classOf[XmlWriter]
   implicit val log =        Logger.getLog(thisclass)
-}
 
-class XmlWriter(
+  def apply(out: OutputStream) = XmlWriter(XMLOutputFactory.newInstance().createXMLEventWriter(out))
+}
+case class XmlWriter(
   writer  :   XMLStreamWriter
 ) extends Iteratee[XmlEvent, Unit] {
   import XmlWriter._
@@ -59,46 +61,34 @@ class XmlWriter(
     }
   }
 
-  case class Cont(stack : List[XmlElement]) extends State.Continue[XmlEvent, Unit] {
+  case class Cont(stack : List[XmlElement]) extends State.Continuation[XmlEvent, Unit] {
 
     def apply(xmlEvent: XmlEvent) = {
+//      log.block("apply", Seq("xmlEvent" -> xmlEvent)){
+//        +"Writing XmlEvent & appending to active element stack"
+//        val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
+//        Continue(
+//          state = Cont(newStack),
+//          metadata = issues
+//        )
+//      }
       log.block("apply", Seq("xmlEvent" -> xmlEvent)){
-        +"Writing XmlEvent & appending to active element stack"
-        val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
-        Result(
-          state = Cont(newStack),
-          metadata = issues
-        )
-      }
-    }
-
-    def endOfInput() = {
-      log.block("endOfInput") {
-        +"Flush and close writer, return success"
-        writer.flush()
-        writer.close()
-        Success(())
-      }
-    }
-
-    private def writeXmlEvent(xmlEvent : XmlEvent, stack : List[XmlElement]) : (List[XmlElement], List[Issue]) = {
-      log.block("writeXmlEvent", Seq("xmlEvent" -> xmlEvent, "stack" -> stack)) {
-        ~"Match event"
+      ~"Match event"
         xmlEvent match {
           case e:StartXmlDocumentEvent => {
             ~"Write start document, no change to stack"
             writer.writeStartDocument()
-            (stack, Nil)
+            Continue(this)
           }
           case e:EndXmlDocumentEvent => {
             ~"Write end document, no change to stack"
             writer.writeEndDocument()
-            (stack, Nil)
+            Continue(this)
           }
           case e:AddXmlCommentEvent => {
             ~"Write comment, no change to stack"
             writer.writeComment(e.comment)
-            (stack, Nil)
+            Continue(this)
           }
           case e:StartXmlElementEvent => {
             ~"Write start element, append element to stack"
@@ -141,31 +131,124 @@ class XmlWriter(
               ~s"writer.writeCharacters($v)"
               writer.writeCharacters(v)
             }
-            (newStack, Nil)
+            Continue(Cont(newStack))
           }
           case e:EndXmlElementEvent => {
             ~"Write end element, no change to stack"
             writer.writeEndElement()
-            (stack, Nil)
+            Continue(this)
           }
           case e:AddXmlTextEvent => {
             ~"Write characters, no change to stack"
             val text = e.text
             ~s"writer.writeCharacters($text)"
             writer.writeCharacters(e.text)
-            (stack, Nil)
+            Continue(this)
           }
-          case e:XmlEvent => {
-            val error = Issues.INSTANCE.recoverableError(s"Invalid XmlEvent: $e")
-            if(issueHandlingStrategy.canContinue(error)) {
-              val warn = Issues.INSTANCE.warning(s"Ignoring invalid XmlEvent: $e")
-              (stack, error :: warn :: Nil)
-            }
-            (stack, error :: Nil)
-          }
+//          case e:XmlEvent => {
+//            Halt.error(
+//              message = s"Invalid XmlEvent: $e",
+//              recover = () => Continue(state=this, metadata=Seq(Issue.warn(s"Ignoring invalid XmlEvent: $e")))
+//            )
+//          }
         }
       }
     }
+
+    def apply(eoi : EndOfInput) = {
+      log.block("apply") {
+        +"Flush and close writer, return success"
+        writer.flush()
+        writer.close()
+        Succeed(())
+      }
+    }
+
+//    private def writeXmlEvent(xmlEvent : XmlEvent, stack : List[XmlElement]) : (List[XmlElement], List[Issue]) = {
+//      log.block("writeXmlEvent", Seq("xmlEvent" -> xmlEvent, "stack" -> stack)) {
+//        ~"Match event"
+//        xmlEvent match {
+//          case e:StartXmlDocumentEvent => {
+//            ~"Write start document, no change to stack"
+//            writer.writeStartDocument()
+//            (stack, Nil)
+//          }
+//          case e:EndXmlDocumentEvent => {
+//            ~"Write end document, no change to stack"
+//            writer.writeEndDocument()
+//            (stack, Nil)
+//          }
+//          case e:AddXmlCommentEvent => {
+//            ~"Write comment, no change to stack"
+//            writer.writeComment(e.comment)
+//            (stack, Nil)
+//          }
+//          case e:StartXmlElementEvent => {
+//            ~"Write start element, append element to stack"
+//            val newStack = e.element :: stack
+//
+//            ~"Start an element"
+//            val qName = e.element.qName
+//            val localName = qName.getLocalName.toString
+//            val nsURI = qName.getNamespaceURI.toString
+//            val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
+//            val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
+//            ~s"writer.writeStartElement($prefix, $localName, $nsURI)"
+//            writer.writeStartElement(prefix, localName, nsURI)
+//
+//            ~"Write namespace prefixes"
+//            for((namespacePrefix, namespaceURI) <- e.element.orderedPrefixes) {
+//              // Skip the prefix for the element
+//              if(prefix != namespacePrefix.toString) {
+//                val namespacePrefixString = namespacePrefix.toString
+//                val namespaceURIString = namespaceURI.toString
+//                ~s"writer.writeNamespace(namespacePrefix=$namespacePrefixString, namespaceURI=$namespaceURIString)"
+//                writer.writeNamespace(namespacePrefixString, namespaceURIString)
+//              }
+//            }
+//
+//            ~"Write attributes"
+//            for((qName,value) <- e.element.orderedAttributes) {
+//              val localName = qName.getLocalName.toString
+//              val nsURI = qName.getNamespaceURI.toString
+//              val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
+//              val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
+//              ~s"writer.writeAttribute(prefix=$prefix, nsURI=$nsURI, localName=$localName, value=$value)"
+//              writer.writeAttribute(prefix, nsURI, localName, value)
+//            }
+//
+//            ~"Write value (if any)"
+//            val value = e.element.value
+//            if(value.isDefined) {
+//              val v = value.get
+//              ~s"writer.writeCharacters($v)"
+//              writer.writeCharacters(v)
+//            }
+//            (newStack, Nil)
+//          }
+//          case e:EndXmlElementEvent => {
+//            ~"Write end element, no change to stack"
+//            writer.writeEndElement()
+//            (stack, Nil)
+//          }
+//          case e:AddXmlTextEvent => {
+//            ~"Write characters, no change to stack"
+//            val text = e.text
+//            ~s"writer.writeCharacters($text)"
+//            writer.writeCharacters(e.text)
+//            (stack, Nil)
+//          }
+//          case e:XmlEvent => {
+//            val error = Issue.error(s"Invalid XmlEvent: $e")
+////            if(issueHandlingStrategy.canContinue(error)) {
+////              val warn = Issues.INSTANCE.warning(s"Ignoring invalid XmlEvent: $e")
+////              (stack, error :: warn :: Nil)
+////            }
+//            (stack, error :: Nil)
+//          }
+//        }
+//      }
+//    }
 
     private def getNamespaceURIToPrefixResolver(stack : List[XmlElement]) = new NamespaceURIToPrefixResolver {
       def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
