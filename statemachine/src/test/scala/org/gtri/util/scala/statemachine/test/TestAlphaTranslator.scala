@@ -23,6 +23,7 @@ package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
 import collection.immutable.NumericRange
+import scala.collection.immutable.Seq
 
 object TestAlphaTranslator {
   val log = Log(classOf[TestAlphaTranslator])

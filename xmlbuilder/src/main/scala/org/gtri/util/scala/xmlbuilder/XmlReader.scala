@@ -28,6 +28,7 @@ import org.gtri.util.xsddatatypes._
 import org.gtri.util.scala.statemachine._
 import java.io.InputStream
 import annotation.tailrec
+import scala.collection.immutable.Seq
 
 
 object XmlReader {
@@ -37,7 +38,6 @@ object XmlReader {
 }
 case class XmlReader(
   in              :   InputStream,
-  totalByteSize   :   Int               = 0,
   chunkSize       :   Int               = StateMachine.STD_CHUNK_SIZE
 ) extends Enumerator[XmlEvent] {
   import XmlReader._
@@ -45,7 +45,8 @@ case class XmlReader(
 
   require(chunkSize > 0)
 
-  private val reader = XMLInputFactory.newInstance().createXMLStreamReader(in)
+  private val reader  = XMLInputFactory.newInstance().createXMLStreamReader(in)
+  private val totalByteSize   = in.available()
 
   def s0() = {
     log.block("s0") {
@@ -113,7 +114,7 @@ case class XmlReader(
           +s"Buffer not empty - make immutable copy and return result"
           Continue(
             state = this,
-            output = buffer.toSeq,
+            output = buffer.toVector,
             metadata = Seq(nextProgress)
           )
         }

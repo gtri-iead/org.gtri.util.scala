@@ -22,6 +22,7 @@
 package org.gtri.util.scala.statemachine
 
 import IssueSeverityCode._
+import scala.collection.immutable.Seq
 
 package object Iteratee {
   type Transition[I,A]        = StateMachine.Transition[I,Unit,A]

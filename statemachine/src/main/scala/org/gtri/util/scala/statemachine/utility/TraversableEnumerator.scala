@@ -22,6 +22,7 @@
 package org.gtri.util.scala.statemachine.utility
 
 import org.gtri.util.scala.statemachine._
+import scala.collection.immutable.Seq
 
 case class TraversableEnumerator[A](
   t         :     Traversable[A],
@@ -35,9 +36,9 @@ case class TraversableEnumerator[A](
     def apply(x : Unit) : Transition[A] = {
       val (nextChunk, remaining) = current.splitAt(chunkSize)
       if(remaining.isEmpty) {
-        Succeed(nextChunk.toSeq)
+        Succeed(nextChunk.toVector)
       } else {
-        Continue(ContWithoutProgress(remaining), nextChunk.toSeq)
+        Continue(ContWithoutProgress(remaining), nextChunk.toVector)
       }
     }
     def apply(x : EndOfInput) = Succeed()
@@ -51,11 +52,11 @@ case class TraversableEnumerator[A](
       val (nextChunk, remaining) = current.splitAt(chunkSize)
       if(remaining.isEmpty) {
         Succeed(
-          output = nextChunk.toSeq,
+          output = nextChunk.toVector,
           metadata = Seq(currentProgress, Progress(maxN, maxN))
         )
       } else {
-        val output = nextChunk.toSeq
+        val output = nextChunk.toVector
         Continue(
           state = ContWithProgress(maxN,remaining),
           output = output,

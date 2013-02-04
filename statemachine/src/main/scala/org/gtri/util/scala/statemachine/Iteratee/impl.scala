@@ -24,6 +24,7 @@ package org.gtri.util.scala.statemachine.Iteratee
 import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.statemachine.Iteratee._
 import org.gtri.util.scala.statemachine.utility
+import scala.collection.immutable.Seq
 
 object impl {
 

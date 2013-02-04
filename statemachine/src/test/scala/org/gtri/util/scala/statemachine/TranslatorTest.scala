@@ -26,6 +26,7 @@ import scala.util.Random
 import test._
 import collection.immutable.NumericRange
 import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
+import scala.collection.immutable.Seq
 
 class TranslatorTest extends FunSpec {
   val rnd = Stream.continually(Random.nextInt(100))

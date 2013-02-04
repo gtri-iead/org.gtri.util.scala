@@ -22,6 +22,7 @@
 package org.gtri.util.scala.statemachine
 
 import org.gtri.util.scala.statemachine.IssueSeverityCode._
+import scala.collection.immutable.Seq
 
 package object Enumerable {
   type Transition[O,A]          = StateMachine.Transition[Unit, O, A]

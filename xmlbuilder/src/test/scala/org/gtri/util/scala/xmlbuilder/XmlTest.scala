@@ -38,7 +38,12 @@ class XmlTest extends FeatureSpec with GivenWhenThen {
       val xmlWriter = XmlWriter(new FileOutputStream("target/test.xml"))
       val plan = xmlReader compose xmlWriter
       When("that plan is run")
-      val result = plan.run()
+      var result = plan.s0.step()
+      while(result.isContinuation) {
+        println(result.metadata)
+        result = result.state.step()
+      }
+//      val result = plan.run()
       Then("the result should be a success")
       assert(result.isSuccess)
       And("the input and output files should match")

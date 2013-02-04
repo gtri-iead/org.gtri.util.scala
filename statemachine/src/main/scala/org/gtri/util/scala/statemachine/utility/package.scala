@@ -25,6 +25,7 @@ import org.gtri.util.scala.statemachine.StateMachine._
 //import annotation.tailrec
 import collection.mutable
 import IssueSeverityCode._
+import scala.collection.immutable.Seq
 
 package object utility {
 
@@ -107,7 +108,7 @@ package object utility {
       overflow = r.overflow
       metadata ++= r.metadata
     }
-    def toTransition : Transition[I,O,A] = Transition(state, output.toSeq, overflow, metadata.toSeq)
+    def toTransition : Transition[I,O,A] = Transition(state, output.toVector, overflow, metadata.toVector)
   }
   object TransitionAccumulator {
     def apply[I,O,A](r : Transition[I,O,A]) : TransitionAccumulator[I,O,A] = TransitionAccumulator(r.state,r.output.toBuffer,r.overflow,r.metadata.toBuffer)

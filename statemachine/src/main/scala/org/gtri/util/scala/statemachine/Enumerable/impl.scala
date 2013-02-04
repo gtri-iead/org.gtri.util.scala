@@ -24,6 +24,7 @@ package org.gtri.util.scala.statemachine.Enumerable
 import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.statemachine.utility
 import org.gtri.util.scala.statemachine.IssueSeverityCode._
+import scala.collection.immutable.Seq
 
 object impl {
   private[impl] def stepEnumerableTransition[O,A](current: Transition[O,A]) : Transition[O,A] = {

@@ -22,6 +22,7 @@
 package org.gtri.util.scala.statemachine
 
 import IssueSeverityCode._
+import scala.collection.immutable.Seq
 
 package object Translator {
   type Transition[I,O]        = StateMachine.Transition[I,O,Unit]

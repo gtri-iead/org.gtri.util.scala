@@ -26,6 +26,7 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
 import scala.util.Random
 import test._
+import scala.collection.immutable.Seq
 
 class TraversableEnumeratorTest extends FunSpec {
   val rnd = Stream.continually(Random.nextInt(100))

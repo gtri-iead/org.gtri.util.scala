@@ -22,6 +22,7 @@
 package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
+import scala.collection.immutable.Seq
 
 object TestRecoverSumIntIteratee {
   val log = Log(classOf[TestRecoverSumIntIteratee])

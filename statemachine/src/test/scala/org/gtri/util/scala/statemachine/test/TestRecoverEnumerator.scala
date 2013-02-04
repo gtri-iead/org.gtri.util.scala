@@ -22,6 +22,7 @@
 package org.gtri.util.scala.statemachine.test
 
 import org.gtri.util.scala.statemachine._
+import scala.collection.immutable.Seq
 
 // Enumerator that will fail (with recover) every 5th item
 object TestRecoverEnumerator {
@@ -37,13 +38,13 @@ case class TestRecoverEnumerator[A](t: Traversable[A]) extends Enumerator[A] {
       val (nextChunk, remaining) = current.splitAt(1)
       if(remaining.isEmpty) {
         Succeed(
-          output = nextChunk.toSeq,
+          output = nextChunk.toVector,
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
       } else {
         val r = Continue(
           state = Cont(n + 1,remaining),
-          output = nextChunk.toSeq,
+          output = nextChunk.toVector,
           metadata = Seq(log.info("info1"),log.info("info2"))
         )
         if(n % 5 == 0) {
