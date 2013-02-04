@@ -24,6 +24,7 @@ package org.gtri.util.scala.statemachine
 import org.scalatest.FunSpec
 import scala.util.Random
 import test._
+import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
 
 class PlanTest extends FunSpec {
   val rnd = Stream.continually(Random.nextInt(100))

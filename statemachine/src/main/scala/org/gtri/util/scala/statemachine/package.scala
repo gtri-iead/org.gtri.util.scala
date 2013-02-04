@@ -25,8 +25,6 @@ import org.gtri.util.scala.statemachine.StateMachine._
 import org.gtri.util.scala.statemachine.IssueSeverityCode._
 
 package object statemachine {
-  val STD_CHUNK_SIZE = 256
-
   type  EOI               =   EndOfInput
   val   EOI               =   EndOfInput
 
@@ -40,16 +38,24 @@ package object statemachine {
   type  Plan[A]           =   StateMachine[Unit,Unit,A]
 
   implicit class traversableToEnumerator[A](self: Traversable[A]) {
-    def toEnumerator = utility.TraversableEnumerator(self, STD_CHUNK_SIZE)
+    def toEnumerator = utility.TraversableEnumerator(self, StateMachine.STD_CHUNK_SIZE)
     def toEnumerator(chunkSize : Int) = utility.TraversableEnumerator(self, chunkSize)
   }
 
-  implicit class implicitStateMachineResultOps[I,O,A](self : Transition[I,O,A]) {
+  implicit class implicitStateMachineTransitionOps[I,O,A](self : Transition[I,O,A]) {
+    def isSuccess = self.state.isSuccess
+    def isContinuation = self.state.isContinuation
+    def isHalted = self.state.isHalted
+
     def toOption : Option[A] = self.state.toOption
     def toOption(shouldRecover: State.Halted[I,O,A] => Boolean) : Option[A] = self.state.toOption(shouldRecover)
   }
 
   implicit class implicitStateMachineStateOps[I,O,A](self: State[I,O,A]) {
+    def isSuccess = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => true }, ifHalted = { _ => false})
+    def isContinuation = self.fold(ifContinuation = { _ => true }, ifSuccess = { _ => false }, ifHalted = { _ => false })
+    def isHalted = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => false }, ifHalted = { _ => true })
+
     def compose[OO,AA](that: State[O,OO,AA]) : State[I,OO,AA] = utility.composeStates(self, that)
     def toOption : Option[A] = {
       self match {

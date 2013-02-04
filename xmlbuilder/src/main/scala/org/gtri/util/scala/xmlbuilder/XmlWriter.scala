@@ -30,19 +30,31 @@ import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
 import org.gtri.util.xsddatatypes.{XsdNCName, XsdAnyURI}
 import org.gtri.util.scala.statemachine._
 import java.io.OutputStream
+import net.sf.saxon.s9api.Processor
+import net.sf.saxon.s9api.SaxonApiException
+import net.sf.saxon.s9api.Serializer
 
 object XmlWriter {
   implicit val thisclass =  classOf[XmlWriter]
   implicit val log =        Logger.getLog(thisclass)
-
-  def apply(out: OutputStream) = XmlWriter(XMLOutputFactory.newInstance().createXMLEventWriter(out))
 }
 case class XmlWriter(
-  writer  :   XMLStreamWriter
+  out  :   OutputStream
 ) extends Iteratee[XmlEvent, Unit] {
   import XmlWriter._
   import Iteratee._
 
+  private val writer = {
+    val p = new Processor(false)
+    val s = new Serializer(out)
+    s.setProcessor(p)
+    s.setOutputProperty(Serializer.Property.ENCODING, "UTF-8")
+    s.setOutputProperty(Serializer.Property.INDENT, "yes")
+    s.setOutputProperty(Serializer.Property.SAXON_INDENT_SPACES, "2")
+    s.setOutputProperty(Serializer.Property.SAXON_LINE_LENGTH, "80")
+
+    s.getXMLStreamWriter()
+  }
   def s0 =  {
     log.block("initialState"){
       Cont(Nil)

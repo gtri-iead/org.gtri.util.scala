@@ -34,22 +34,18 @@ object XmlReader {
   implicit val thisclass  =   classOf[XmlReader]
   implicit val log        =   Logger.getLog(thisclass)
 
-  def apply(in : InputStream, chunkSize : Int = STD_CHUNK_SIZE) =
-    XmlReader(
-      reader = XMLInputFactory.newInstance().createXMLStreamReader(in),
-      totalByteSize = in.available(),
-      chunkSize = chunkSize
-    )
 }
 case class XmlReader(
-  reader              :   XMLStreamReader,
-  val totalByteSize   :   Int               = 0,
-  val chunkSize       :   Int               = STD_CHUNK_SIZE
+  in              :   InputStream,
+  totalByteSize   :   Int               = 0,
+  chunkSize       :   Int               = StateMachine.STD_CHUNK_SIZE
 ) extends Enumerator[XmlEvent] {
   import XmlReader._
   import Enumerator._
 
   require(chunkSize > 0)
+
+  private val reader = XMLInputFactory.newInstance().createXMLStreamReader(in)
 
   def s0() = {
     log.block("s0") {

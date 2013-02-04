@@ -23,6 +23,7 @@ package org.gtri.util.scala.statemachine
 
 import org.scalatest.FunSpec
 import org.gtri.util.scala.statemachine._
+import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
 import scala.util.Random
 import test._
 

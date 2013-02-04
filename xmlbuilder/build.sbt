@@ -24,6 +24,10 @@ libraryDependencies += "org.gtri.util" %% "scala.statemachine" % "1.0-SNAPSHOT"
 
 //libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.0.0-M6" cross CrossVersion.full
 
+libraryDependencies += "net.sf.saxon" % "Saxon-HE" % "9.4"
+
+libraryDependencies += "com.googlecode.java-diff-utils" % "diffutils" % "1.2.1" % "test"
+
 publishTo <<= {    // set publish repository url according to whether `version` ends in "-SNAPSHOT"
   val releases = "iead-artifactory" at "https://iead.ittl.gtri.org/artifactory/internal"
   val snapshots = "iead-artifactory-snapshots" at "https://iead.ittl.gtri.org/artifactory/internal-snapshots"

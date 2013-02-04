@@ -25,7 +25,7 @@ import org.gtri.util.scala.statemachine._
 
 case class TraversableEnumerator[A](
   t         :     Traversable[A],
-  chunkSize :     Int               =   STD_CHUNK_SIZE
+  chunkSize :     Int               =   StateMachine.STD_CHUNK_SIZE
 ) extends Enumerator[A] {
   import Enumerator._
   require(chunkSize > 0)

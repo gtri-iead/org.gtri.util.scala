@@ -28,6 +28,7 @@ trait StateMachine[I,O,A] {
   def s0 : State[I,O,A]
 }
 object StateMachine {
+  val STD_CHUNK_SIZE = 256
 
   case class Transition[I,O,A](
     state         :   State[I,O,A],
