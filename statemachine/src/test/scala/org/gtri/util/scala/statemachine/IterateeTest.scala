@@ -66,5 +66,50 @@ class IterateeTest extends FunSpec {
       val result = utility.forceDoneTransition(utility.applyInputToState(i.s0, l, IssueRecoverStrategy.STRICT))
       assert(result.metadata.length == (n * 2) + 2)
     }
+    it("should be able to peek at a value using Iteratee.peek") {
+      val n = STD_CHUNK_SIZE * 2
+      val l = rnd.take(n).toList
+      val sum = l(0) + l.take(10).foldLeft(0) { _ + _ }
+      val i1 : Iteratee[Int,Int] = TestSumIntIteratee(10)
+      val i2 : Iteratee[Int,Int] = for {
+        v <- Iteratee.peek[Int]
+        sum1 <- i1
+      } yield v + sum1
+      // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
+      val result = utility.forceDoneTransition(utility.applyInputToState(i2.s0, l, IssueRecoverStrategy.STRICT))
+      val optSum : Option[Int] = result.toOption
+      assert(optSum.isDefined && optSum.get == sum)
+    }
+
+// TODO:
+//    it("should be implicitly constructable from a function that takes input and returns a done State") {
+//      import Iteratee._
+//      def f(x : Int) : State.Done[Int,Int] = {
+//        if(x != 0) {
+//          State.Success(10 / x)
+//        } else {
+//          State.Halted(
+//            issues = Issue.fatal("Divide by zero") :: Nil,
+//            optRecover = Some(() =>
+//              Succeed(10 / 1)
+//            )
+//          )
+//        }
+//      }
+//      val n = STD_CHUNK_SIZE * 2
+//      val l = rnd.take(n).toList
+//      val sum = l(0) + l.take(10).foldLeft(0) { _ + _ }
+//      val i1 : Iteratee[Int,Int] = TestSumIntIteratee(10)
+//      val i2 : Iteratee[Int,Int] = f _
+//      val i3 : Iteratee[Int,Int] = for {
+//        sum1 <- i1
+//        sum2 <- i2
+//      } yield sum1 + sum2
+//      // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
+//      val result = utility.forceDoneTransition(utility.applyInputToState(i3.s0, l, IssueRecoverStrategy.STRICT))
+//      val optSum : Option[Int] = result.toOption
+//      assert(optSum.isDefined && optSum.get == sum)
+//
+//    }
   }
 }

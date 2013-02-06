@@ -23,6 +23,7 @@ package org.gtri.util.scala
 
 import org.gtri.util.scala.statemachine.StateMachine._
 import org.gtri.util.scala.statemachine.IssueSeverityCode._
+import scala.collection.immutable.Seq
 
 package object statemachine {
   type  EOI               =   EndOfInput
@@ -118,4 +119,37 @@ package object statemachine {
     def s0 = tuple._1.s0 compose tuple._2.s0 compose tuple._3.s0
   }
 
+  // TODO: Should this be I => Transition[I,Unit,A]?
+//  implicit class implicitSimpleDoneIteratee[I,A](f: I => State.Done[I,Unit,A]) extends Iteratee[I,A] {
+//    import Iteratee._
+//    case class Cont() extends State.Continuation[I,A] {
+//      override def apply(xs : Seq[I]) = {
+//        if(xs.nonEmpty) {
+//          Transition(
+//            state = f(xs(0)),
+//            overflow = xs
+//          )
+//        } else {
+//          Transition(
+//            state = this
+//          )
+//        }
+//      }
+//      def apply(x : I) = Transition(
+//        state = f(x),
+//        overflow = x :: Nil
+//      )
+//      def apply(eoi : EndOfInput) = Halt.fatal("Input required")
+//    }
+//    def s0 = Cont()
+//  }
+
+//  implicit class implicitSimpleTransitionIteratee[I,A](f: I => Transition[I,Unit,A]) extends Iteratee[I,A] {
+//    import Iteratee._
+//    case class Cont() extends State.Continuation[I,A] {
+//      def apply(x : I) = f(x)
+//      def apply(eoi : EndOfInput) = Halt.fatal("Input required")
+//    }
+//    def s0 = Cont()
+//  }
 }

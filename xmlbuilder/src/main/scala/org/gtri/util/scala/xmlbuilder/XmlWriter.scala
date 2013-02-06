@@ -81,7 +81,7 @@ case class XmlWriter(
 //        val (newStack, issues) = writeXmlEvent(xmlEvent, stack)
 //        Continue(
 //          state = Cont(newStack),
-//          metadata = issues
+//          optMetadata = issues
 //        )
 //      }
       log.block("apply", Seq("xmlEvent" -> xmlEvent)){
@@ -160,7 +160,7 @@ case class XmlWriter(
 //          case e:XmlEvent => {
 //            Halt.error(
 //              message = s"Invalid XmlEvent: $e",
-//              recover = () => Continue(state=this, metadata=Seq(Issue.warn(s"Ignoring invalid XmlEvent: $e")))
+//              recover = () => Continue(state=this, optMetadata=Seq(Issue.warn(s"Ignoring invalid XmlEvent: $e")))
 //            )
 //          }
         }

@@ -1,4 +1,4 @@
-scalaVersion := "2.10.0-RC5"
+scalaVersion := "2.10.0"
 
 organization := "org.gtri.util"
 
@@ -10,15 +10,7 @@ scalacOptions ++= Seq("-feature","-unchecked", "-deprecation")
 
 resolvers += "iead-all" at "https://iead.ittl.gtri.org/artifactory/all" // need this for getting IEAD artifacts
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10.0-RC5" % "2.0.M5-B1"
-
-//libraryDependencies += "org.gtri.util" %% "issue.impl" % "1.0-SNAPSHOT"
-
-libraryDependencies += "org.gtri.util" %% "scala.exelog" % "1.0-SNAPSHOT"
-
-libraryDependencies += "org.gtri.util" %% "scala.optrecover" % "1.0-SNAPSHOT"
-
-//libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.0.0-M6" cross CrossVersion.full
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.0.M5b"
 
 publishTo <<= {    // set publish repository url according to whether `version` ends in "-SNAPSHOT"
   val releases = "iead-artifactory" at "https://iead.ittl.gtri.org/artifactory/internal"

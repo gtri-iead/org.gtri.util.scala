@@ -44,8 +44,8 @@ package object Translator {
     type Success[I,O]         = StateMachine.State.Success[I,O,Unit]
     val Success               = StateMachine.State.Success
 
-    type Issue[I,O]           = StateMachine.State.Halted[I,O,Unit]
-    val Issue                 = StateMachine.State.Halted
+    type Halted[I,O]           = StateMachine.State.Halted[I,O,Unit]
+    val Halted                 = StateMachine.State.Halted
   }
 
   object Continue {

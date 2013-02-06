@@ -110,3 +110,13 @@ Feb 1
 #3: Renamed States/Results for clarity => Continue(Transition)/Continuation(State), Succeed(Transition)/Success(State)
  and Halt(Transition)/Halted(State)
 #4: Added Issue. Halted now accepts a Seq[Issue]
+
+Feb 4
+#1 Added Iteratee.peek
+
+Feb 5
+#1: Should recovery by utility functions be limited to a maximum number of tries to prevent infinite recover loops?
+#2: Parsers, Partial parsers, how best to implement them using this framework?
+#3: Should Input[A] be added?
+#4: Should Transition be specialized into Succeed, Halt and Continue case classes?
+#5: If machine A depends on disparate machine B, how to compose a recovery of A if B Halts with a recover?

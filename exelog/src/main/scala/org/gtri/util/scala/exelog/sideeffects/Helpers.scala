@@ -19,7 +19,7 @@
     along with org.gtri.util.scala library. If not, see <http://www.gnu.org/licenses/>.
 
 */
-package org.gtri.util.scala.exelog
+package org.gtri.util.scala.exelog.sideeffects
 
 object Helpers {
   def exitMessage[A](c : Class[_], methodName : String, retv : A) : String = {

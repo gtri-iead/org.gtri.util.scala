@@ -1,4 +1,4 @@
-scalaVersion := "2.10.0-RC5"
+scalaVersion := "2.10.0"
 
 organization := "org.gtri.util"
 
@@ -10,7 +10,7 @@ scalacOptions ++= Seq("-feature","-unchecked", "-deprecation")
 
 resolvers += "iead-all" at "https://iead.ittl.gtri.org/artifactory/all" // need this for getting IEAD artifacts
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10.0-RC5" % "2.0.M5-B1"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.0.M5b"
 
 libraryDependencies += "log4j" % "log4j" % "1.2.17"
 

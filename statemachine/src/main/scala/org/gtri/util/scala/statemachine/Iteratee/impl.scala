@@ -25,6 +25,7 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.statemachine.Iteratee._
 import org.gtri.util.scala.statemachine.utility
 import scala.collection.immutable.Seq
+import org.gtri.util.scala.statemachine.StateMachine.State.{Halted, Success, Continuation}
 
 object impl {
 
@@ -156,4 +157,19 @@ object impl {
    */
   def flatMapIteratee[I,A,B](m : Iteratee[I,A], f: A => Iteratee[I,B]) : Iteratee[I,B] = FlatMapIteratee(m,f)
 
+  private[impl] case class PeekIterateeState[A]() extends State.Continuation[A,A] {
+    def apply(x : A) = {
+      Succeed(
+        value = x,
+        overflow = x :: Nil
+      )
+    }
+    def apply(x : EOI) = Halt.fatal("No input")
+  }
+
+  private[impl] case class PeekIteratee[A]() extends Iteratee[A,A] {
+    def s0 = PeekIterateeState()
+  }
+
+  def peek[A] = PeekIteratee[A]()
 }

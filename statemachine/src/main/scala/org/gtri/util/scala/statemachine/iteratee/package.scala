@@ -91,6 +91,8 @@ package object Iteratee {
     ) = StateMachine.Halt[I,Unit,A](issues=Seq(Issue.fatal(message,cause)), overflow=overflow, metadata=metadata)
   }
 
+  def peek[A] : Iteratee[A,A] = impl.peek[A]
+
     /*
   ∑ => input alphabet
   S => set of states

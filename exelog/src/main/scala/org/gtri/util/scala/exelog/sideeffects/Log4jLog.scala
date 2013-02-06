@@ -25,7 +25,6 @@ import org.apache.log4j
 import org.apache.log4j.Level
 import org.apache.log4j.Level._
 import org.gtri.util.scala.exelog
-import exelog.{LogLevel, LogRecord}
 
 final class Log4jLog(
   val name : String,
@@ -70,31 +69,4 @@ final class Log4jLog(
   @inline def fatal(cause: Throwable) = tryLog(FATAL, cause.getMessage, cause)
 
   @inline def fatal(message: => String, cause: Throwable) = tryLog(FATAL, message, cause)
-
-  @inline def log(r: LogRecord) {
-      r.level match {
-        case LogLevel.TRACE => trace(r.message)
-        case LogLevel.DEBUG => debug(r.message)
-        case LogLevel.INFO => info(r.message)
-        case LogLevel.WARN =>
-          if(r.optThrown.isDefined) {
-            warn(r.message, r.optThrown.get)
-          } else {
-            warn(r.message)
-          }
-        case LogLevel.ERROR =>
-          if(r.optThrown.isDefined) {
-            error(r.message, r.optThrown.get)
-          } else {
-            error(r.message)
-          }
-        case LogLevel.FATAL =>
-          if(r.optThrown.isDefined) {
-            fatal(r.message, r.optThrown.get)
-          } else {
-            fatal(r.message)
-          }
-        case _ => // noop
-      }
-  }
 }

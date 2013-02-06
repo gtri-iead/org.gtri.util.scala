@@ -45,11 +45,11 @@ object XmlElement {
     attributes              :   Seq[(XsdQName, String)],
     prefixes                :   Seq[(XsdNCName, XsdAnyURI)]
   ) = new XmlElement(
-    qName,
-    value,
-    attributes.toMap,
-    prefixes.toMap,
-    Some(Metadata(
+    qName                     =   qName,
+    value                     =   value,
+    attributesMap             =   attributes.toMap,
+    prefixToNamespaceURIMap   =   prefixes.toMap,
+    optMetadata               =   Some(Metadata(
       optRawAttributesOrder =   None,
       optAttributesOrder    =   Some(attributes map { _._1 }),
       optPrefixesOrder      =   Some(prefixes map { _._1 }),
@@ -63,11 +63,11 @@ object XmlElement {
     prefixes                :   Seq[(XsdNCName, XsdAnyURI)],
     optLocator              :   Option[DiagnosticLocator]
   ) = new XmlElement(
-    qName,
-    value,
-    attributes.toMap,
-    prefixes.toMap,
-    Some(Metadata(
+    qName                     =   qName,
+    value                     =   value,
+    attributesMap             =   attributes.toMap,
+    prefixToNamespaceURIMap   =   prefixes.toMap,
+    optMetadata               =   Some(Metadata(
       optRawAttributesOrder =  None,
       optAttributesOrder    =  Some(attributes map { _._1 }),
       optPrefixesOrder      =  Some(prefixes map { _._1 }),
@@ -82,11 +82,11 @@ object XmlElement {
     optLocator              :   Option[DiagnosticLocator],
     optRawAttributes        :   Option[Seq[(String,String)]]
   ) = new XmlElement(
-    qName,
-    value,
-    attributes.toMap,
-    prefixes.toMap,
-    Some(Metadata(
+    qName                     =   qName,
+    value                     =   value,
+    attributesMap             =   attributes.toMap,
+    prefixToNamespaceURIMap   =   prefixes.toMap,
+    optMetadata               =   Some(Metadata(
       optRawAttributesOrder =  optRawAttributes map { _ map { _._1 } },
       optAttributesOrder    =  Some(attributes map { _._1 }),
       optPrefixesOrder      =  Some(prefixes map { _._1 }),
@@ -96,60 +96,94 @@ object XmlElement {
 }
 case class XmlElement(
   qName                     :  XsdQName,
-  value                     :  Option[String],
-  attributesMap             :  Map[XsdQName, String],
-  prefixToNamespaceURIMap   :  Map[XsdNCName, XsdAnyURI],
-  metadata                  :  Option[Metadata]             = None
+  value                     :  Option[String]                  = None,
+  attributesMap             :  Map[XsdQName, String]           = Map.empty,
+  prefixToNamespaceURIMap   :  Map[XsdNCName, XsdAnyURI]       = Map.empty,
+  optMetadata                  :  Option[Metadata]             = None
 )extends NamespaceURIToPrefixResolver {
-  import XmlElement._
 
-  lazy val orderedAttributes : Seq[(XsdQName, String)] = {
-    log.block("orderAttributes") {
-      +"Order attributes by attributesOrder metadata (if defined) or sort lexographically by name"
-      if(metadata.isDefined && metadata.get.optAttributesOrder.isDefined) {
-        ~"Sort by metadata attributesOrder"
-        metadata.get.optAttributesOrder.get.map({
-          qName => attributesMap.get(qName).map { value => (qName,value) }
-        }).flatten
-      } else {
-        ~"Sort by name lexographically"
-        attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-      }
-    }
-  }
+  lazy val metadataOrderedAttributes : Option[Seq[(XsdQName,String)]] =
+    for{
+      metadata <- optMetadata
+      attributesOrder <- metadata.optAttributesOrder
+    } yield for {
+      qName <- attributesOrder
+      value <- attributesMap.get(qName)
+    } yield (qName, value)
 
-  lazy val orderedPrefixes : Seq[(XsdNCName, XsdAnyURI)] = {
-    log.block("orderedPrefixes") {
-      +"Order prefixes by prefixOrder metadata (if defined) or sort lexographically name"
-      if(metadata.isDefined && metadata.get.optPrefixesOrder.isDefined) {
-        ~"Sort by metadata prefixOrder"
-        metadata.get.optPrefixesOrder.get.map({
-          prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
-        }).flatten
-      } else {
-        ~"Sort by name lexographically"
-        prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-      }
+  lazy val orderedAttributes : Seq[(XsdQName, String)] =
+    metadataOrderedAttributes getOrElse {
+      // If no metadata then sort by attribute name
+      attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
     }
-  }
+
+  //  {
+//    log.block("orderAttributes") {
+//      +"Order attributes by attributesOrder optMetadata (if defined) or sort lexographically by name"
+//      val o : Option[Seq[(XsdQName,String)]] =
+//      val retv : Seq[(XsdQName,String)] =
+//        o.getOrElse(
+//          attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
+//        )
+//
+//      if(optMetadata.isDefined && optMetadata.get.optAttributesOrder.isDefined) {
+//        ~"Sort by optMetadata attributesOrder"
+//        optMetadata.get.optAttributesOrder.get.map({
+//          qName => attributesMap.get(qName).map { value => (qName,value) }
+//        }).flatten
+//      } else {
+//        ~"Sort by name lexographically"
+//        attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
+//      }
+//    }
+//  }
+
+  lazy val metadataOrderedPrefixes : Option[Seq[(XsdNCName, XsdAnyURI)]] =
+    for{
+      metadata <- optMetadata
+      prefixesOrder <- metadata.optPrefixesOrder
+    } yield for {
+      prefix <- prefixesOrder
+      uri <- prefixToNamespaceURIMap.get(prefix)
+    } yield (prefix,uri)
+
+  lazy val orderedPrefixes : Seq[(XsdNCName, XsdAnyURI)] =
+    metadataOrderedPrefixes getOrElse {
+      // If no metadata, sort by prefix name
+      prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
+    }
+//  {
+//    log.block("orderedPrefixes") {
+//      +"Order prefixes by prefixOrder optMetadata (if defined) or sort lexographically name"
+//      if(optMetadata.isDefined && optMetadata.get.optPrefixesOrder.isDefined) {
+//        ~"Sort by optMetadata prefixOrder"
+//        optMetadata.get.optPrefixesOrder.get.map({
+//          prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
+//        }).flatten
+//      } else {
+//        ~"Sort by name lexographically"
+//        prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
+//      }
+//    }
+//  }
 
   lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
 
-  def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = {
-    log.block("isValidPrefixForNamespaceURI", Seq("prefix" -> prefix, "namespaceURI" -> namespaceURI)) {
-      +"TRUE if prefix is defined with the given namespaceURI otherwise FALSE"
-      val optionNsURI = prefixToNamespaceURIMap.get(prefix)
-      if(optionNsURI.isDefined) {
-        optionNsURI.get == namespaceURI
-      } else {
-        false
-      }
-    }
-  }
+  def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) =
+    // Convert to Map[XsdNCName, Boolean] that is true if it matches namespaceURI and provide a default value false if prefix isn't mapped
+    prefixToNamespaceURIMap mapValues { _ == namespaceURI } getOrElse(prefix, false)
 
-  def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = {
-    log.block("getPrefixForNamespaceURI", Seq("namespaceURI" -> namespaceURI)) {
-      namespaceURIToPrefixMap.get(namespaceURI).orNull
-    }
-  }
+//  {
+//    log.block("isValidPrefixForNamespaceURI", Seq("prefix" -> prefix, "namespaceURI" -> namespaceURI)) {
+//      +"TRUE if prefix is defined with the given namespaceURI otherwise FALSE"
+//      val optionNsURI = prefixToNamespaceURIMap.get(prefix)
+//      if(optionNsURI.isDefined) {
+//        optionNsURI.get == namespaceURI
+//      } else {
+//        false
+//      }
+//    }
+//  }
+
+  def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = namespaceURIToPrefixMap.get(namespaceURI).orNull
 }
