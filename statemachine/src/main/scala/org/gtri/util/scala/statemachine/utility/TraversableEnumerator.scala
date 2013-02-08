@@ -26,7 +26,7 @@ import scala.collection.immutable.Seq
 
 case class TraversableEnumerator[A](
   t         :     Traversable[A],
-  chunkSize :     Int               =   StateMachine.STD_CHUNK_SIZE
+  chunkSize :     Int               =   Enumerator.STD_CHUNK_SIZE
 ) extends Enumerator[A] {
   import Enumerator._
   require(chunkSize > 0)

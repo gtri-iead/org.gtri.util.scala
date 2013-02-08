@@ -4,7 +4,7 @@ import org.scalatest.FunSpec
 import org.gtri.util.scala.statemachine._
 import scala.util.Random
 import test._
-import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
+import org.gtri.util.scala.statemachine.Enumerator.STD_CHUNK_SIZE
 import scala.collection.immutable.Seq
 
 class IterateeTest extends FunSpec {
@@ -17,7 +17,7 @@ class IterateeTest extends FunSpec {
       val sum = l.foldLeft(0) { _ + _ }
       val i : Iteratee[Int,Int] = TestSumIntIteratee()
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applyInputToState(i.s0, l, IssueRecoverStrategy.STRICT))
+      val result = utility.forceDoneTransition(utility.applySeqToState(i.s0, l))
       val optSum : Option[Int] = result.toOption
       assert(optSum.isDefined && optSum.get == sum)
     }
@@ -31,7 +31,7 @@ class IterateeTest extends FunSpec {
       val i4 : Iteratee[Int,Int] = TestSumIntIteratee(10)
       val i5 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2;sum3 <- i3;sum4 <- i4) yield sum1 + sum2 + sum3 + sum4
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applyInputToState(i5.s0, l, IssueRecoverStrategy.STRICT))
+      val result = utility.forceDoneTransition(utility.applySeqToState(i5.s0, l))
       val optSum : Option[Int] = result.toOption
       assert(optSum.isDefined && optSum.get == sum)
     }
@@ -45,7 +45,7 @@ class IterateeTest extends FunSpec {
       val i4 : Iteratee[Int,Int] = TestRecoverSumIntIteratee(10)
       val i5 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2;sum3 <- i3;sum4 <- i4) yield sum1 + sum2 + sum3 + sum4
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applyInputToState(i5.s0, l, IssueRecoverStrategy.STRICT))
+      val result = utility.forceDoneTransition(utility.applySeqToState(i5.s0, l))
       val isRecover =
         result.state match {
           case q : Iteratee.State.Continuation[Int,Int] => false
@@ -53,8 +53,10 @@ class IterateeTest extends FunSpec {
           case q: Iteratee.State.Success[Int,Int] => false
         }
       assert(isRecover == true && result.overflow == l.drop(5))
-      val result2 = utility.forceDoneTransition(utility.applyInputToState(result.state, result.overflow, shouldRecover = { (q: Iteratee.State.Halted[Int,Int]) => true }))
-      val optSum : Option[Int] = result2.toOption(shouldRecover = IssueRecoverStrategy.LAX)
+      val result2 = utility.recoverTransition(utility.applySeqToState(result.state, result.overflow), shouldRecover = { (q: Iteratee.State.Halted[Int,Int]) => true }, maxAttempts = 4)
+      val optSum : Option[Int] = result2.toOption
+//      println(s"result2=$result2")
+//      println(s"optSum=$optSum")
       assert(optSum.isDefined && optSum.get == sum)
     }
     it("should accumulate metadata") {
@@ -63,7 +65,7 @@ class IterateeTest extends FunSpec {
       val sum = l.foldLeft(0) { _ + _ }
       val i : Iteratee[Int,Int] = TestSumIntIteratee()
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applyInputToState(i.s0, l, IssueRecoverStrategy.STRICT))
+      val result = utility.forceDoneTransition(utility.applySeqToState(i.s0, l))
       assert(result.metadata.length == (n * 2) + 2)
     }
     it("should be able to peek at a value using Iteratee.peek") {
@@ -76,7 +78,7 @@ class IterateeTest extends FunSpec {
         sum1 <- i1
       } yield v + sum1
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applyInputToState(i2.s0, l, IssueRecoverStrategy.STRICT))
+      val result = utility.forceDoneTransition(utility.applySeqToState(i2.s0, l))
       val optSum : Option[Int] = result.toOption
       assert(optSum.isDefined && optSum.get == sum)
     }
@@ -106,7 +108,7 @@ class IterateeTest extends FunSpec {
 //        sum2 <- i2
 //      } yield sum1 + sum2
 //      // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-//      val result = utility.forceDoneTransition(utility.applyInputToState(i3.s0, l, IssueRecoverStrategy.STRICT))
+//      val result = utility.forceDoneTransition(utility.applySeqToState(i3.s0, l, IssueRecoverStrategy.STRICT))
 //      val optSum : Option[Int] = result.toOption
 //      assert(optSum.isDefined && optSum.get == sum)
 //

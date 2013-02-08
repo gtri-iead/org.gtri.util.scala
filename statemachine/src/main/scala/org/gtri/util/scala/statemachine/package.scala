@@ -22,7 +22,6 @@
 package org.gtri.util.scala
 
 import org.gtri.util.scala.statemachine.StateMachine._
-import org.gtri.util.scala.statemachine.IssueSeverityCode._
 import scala.collection.immutable.Seq
 
 package object statemachine {
@@ -39,7 +38,7 @@ package object statemachine {
   type  Plan[A]           =   StateMachine[Unit,Unit,A]
 
   implicit class traversableToEnumerator[A](self: Traversable[A]) {
-    def toEnumerator = utility.TraversableEnumerator(self, StateMachine.STD_CHUNK_SIZE)
+    def toEnumerator = utility.TraversableEnumerator(self, Enumerator.STD_CHUNK_SIZE)
     def toEnumerator(chunkSize : Int) = utility.TraversableEnumerator(self, chunkSize)
   }
 
@@ -49,7 +48,7 @@ package object statemachine {
     def isHalted = self.state.isHalted
 
     def toOption : Option[A] = self.state.toOption
-    def toOption(shouldRecover: State.Halted[I,O,A] => Boolean) : Option[A] = self.state.toOption(shouldRecover)
+    def toOption(haltedRecoverStrategy : HaltedRecoveryStrategy[I,O,A]) : Option[A] = self.state.toOption(haltedRecoverStrategy)
   }
 
   implicit class implicitStateMachineStateOps[I,O,A](self: State[I,O,A]) {
@@ -65,16 +64,12 @@ package object statemachine {
         case q : State.Continuation[I,O,A] => None
       }
     }
-    def toOption(shouldRecover: State.Halted[I,O,A] => Boolean) : Option[A] = {
+    def toOption(haltedRecoverStrategy : HaltedRecoveryStrategy[I,O,A]) : Option[A] = {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
         case q : State.Halted[I,O,A] =>
-          if(shouldRecover(q) && q.optRecover.isDefined) {
-            val r = q.optRecover.get()
-            r.toOption
-          } else {
-            None
-          }
+          val (_,r) = haltedRecoverStrategy.recover(q)
+          r.state.toOption
         case q : State.Continuation[I,O,A] => None
       }
     }
@@ -86,11 +81,13 @@ package object statemachine {
 
   implicit class implicitEnumerableStateOps[O,A](self: Enumerable.State[O,A]) {
     def step() = Enumerable.impl.stepEnumerableState(self)
-    def run(shouldRecover: Enumerable.State.Halted[O,A] => Boolean = IssueRecoverStrategy.NORMAL) = Enumerable.impl.runEnumerableState(self, shouldRecover)
+    def run() = Enumerable.impl.runEnumerableState(self, HaltedRecoveryStrategy.STRICT[Unit,O,A])._1
+    def run(haltedRecoveryStrategy : HaltedRecoveryStrategy[Unit,O,A]) = Enumerable.impl.runEnumerableState(self, haltedRecoveryStrategy)
   }
 
   implicit class implicitEnumerableStateMachineOps[O,A](self: Enumerable[O,A]) {
-    def run(shouldRecover: Enumerable.State.Halted[O,A] => Boolean = IssueRecoverStrategy.NORMAL) = Enumerable.impl.runEnumerableState(self.s0, shouldRecover)
+    def run() = Enumerable.impl.runEnumerableState(self.s0, HaltedRecoveryStrategy.STRICT[Unit,O,A])._1
+    def run(haltedRecoveryStrategy : HaltedRecoveryStrategy[Unit,O,A]) = Enumerable.impl.runEnumerableState(self.s0, haltedRecoveryStrategy)
   }
 
   implicit class implicitIterateeStateOps[I,A](self: Iteratee.State[I,A]) {

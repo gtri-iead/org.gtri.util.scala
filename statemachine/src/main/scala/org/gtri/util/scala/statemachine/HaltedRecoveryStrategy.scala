@@ -22,17 +22,24 @@
 package org.gtri.util.scala.statemachine
 
 import IssueSeverityCode._
+import org.gtri.util.scala.statemachine.StateMachine._
 
-case class Issue(
-  severityCode    :   IssueSeverityCode,
-  message         :   String,
-  cause           :   Option[Throwable] = None
-)
+object HaltedRecoveryStrategy {
+  implicit class issueRecoveryStrategyFromFunction[I,O,A](f: StateMachine.State.Halted[I,O,A] => Boolean) extends HaltedRecoveryStrategy[I,O,A] {
+    def recover(s: State.Halted[I, O, A]) = (this, utility.recoverTransition(Transition(s),f,Int.MaxValue))
+  }
 
-object Issue {
-  def debug(message : String, cause : Option[Throwable] = None) = Issue(DEBUG, message, cause)
-  def info(message : String, cause : Option[Throwable] = None) = Issue(INFO, message, cause)
-  def warn(message : String, cause : Option[Throwable] = None) = Issue(WARN, message, cause)
-  def error(message : String, cause : Option[Throwable] = None) = Issue(ERROR, message, cause)
-  def fatal(message : String, cause : Option[Throwable] = None) = Issue(FATAL, message, cause)
+  def STRICT[I,O,A] : HaltedRecoveryStrategy[I,O,A] = (q: State.Halted[_,_,_]) => false
+  def NORMAL[I,O,A] : HaltedRecoveryStrategy[I,O,A]= (q: State.Halted[_,_,_]) =>
+    q.severityCode match {
+      case WARN => true
+      case ERROR => false
+      case FATAL => false
+    }
+
+  def LAX[I,O,A] : HaltedRecoveryStrategy[I,O,A] = (q: State.Halted[_,_,_]) => true
 }
+trait HaltedRecoveryStrategy[I,O,A] {
+  def recover(s: State.Halted[I,O,A]) : (HaltedRecoveryStrategy[I,O,A], Transition[I,O,A])
+}
+

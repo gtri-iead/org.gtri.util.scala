@@ -118,5 +118,12 @@ Feb 5
 #1: Should recovery by utility functions be limited to a maximum number of tries to prevent infinite recover loops?
 #2: Parsers, Partial parsers, how best to implement them using this framework?
 #3: Should Input[A] be added?
+#3a: This could be implemented on top of the framework by adding Input[A] and an implicit conversion for f: Input[A] => Transition[I,O,A] to a Continuation[I,O,A] with methods implemented in terms of f
 #4: Should Transition be specialized into Succeed, Halt and Continue case classes?
 #5: If machine A depends on disparate machine B, how to compose a recovery of A if B Halts with a recover?
+
+Feb 6
+
+#1: Added Input[A], fixed problems with recovering Halted states that this addition exposed
+#2: Renamed IssueRecoveryStrategy to HaltedRecoveryStrategy
+#3: Redesigned HaltedRecoveryStrategy to combine the accumulator and transition function into a single strategy object

@@ -24,8 +24,7 @@ package org.gtri.util.scala.statemachine
 import org.scalatest.FunSpec
 import scala.util.Random
 import test._
-import collection.immutable.NumericRange
-import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
+import org.gtri.util.scala.statemachine.Enumerator.STD_CHUNK_SIZE
 import scala.collection.immutable.Seq
 
 class TranslatorTest extends FunSpec {
@@ -50,7 +49,7 @@ class TranslatorTest extends FunSpec {
       val t : Translator[Int,String] = TestIntToStringTranslator()
       val it : Iteratee[Int,String] = t compose i
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applyInputToState(it.s0, l, IssueRecoverStrategy.STRICT))
+      val result = utility.forceDoneTransition(utility.applySeqToState(it.s0, l))
       val optSum : Option[String] = result.toOption
       assert(optSum.isDefined && optSum.get == ls)
     }
@@ -61,9 +60,18 @@ class TranslatorTest extends FunSpec {
       val e : Enumerator[Int] = TestRecoverEnumerator(l) // (n * 2) + ((n / 5) * 2)
       val t : Translator[Int,String] = TestIntToStringTranslator() // (n * 2) + 2
       val et : Enumerator[String] = e compose t
-      val result = et.run(shouldRecover = { _ => true })
-      val eMetadataCount = (n * 2) + ((n/5)*2)
-      val tMetadataCount = (n * 2) + 2
+      val (result,_) = et.run(HaltedRecoveryStrategy.LAX)
+      val eMetadataCount = {
+        val metadataFromTestRecoverEnumerator = (n/5)*2
+        val metadataFromIssues = (n/5)
+        val metadataFromContinuation = n * 2
+        metadataFromTestRecoverEnumerator + metadataFromIssues + metadataFromContinuation
+      }
+      val tMetadataCount = {
+        val metadataFromContinuation = n * 2
+        val metadataFromEOI = 2
+        metadataFromContinuation + metadataFromEOI
+      }
       assert(result.metadata.length == (eMetadataCount + tMetadataCount))
     }
     it("should accumulate Transitions in the correct order") {
@@ -71,7 +79,7 @@ class TranslatorTest extends FunSpec {
       val cba = 'z'.toByte to 'a'.toByte by -1 map { _.toChar.toString }
       val tr : Translator[String,String] = TestAlphaTranslator()
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result : Translator.Transition[String,String] = utility.applyInputToState(tr.s0, abc.toList, IssueRecoverStrategy.STRICT)
+      val result : Translator.Transition[String,String] = utility.applySeqToState(tr.s0, abc.toList)
       assert(result.output == cba)
     }
 

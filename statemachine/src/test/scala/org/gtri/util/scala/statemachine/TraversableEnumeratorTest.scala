@@ -23,7 +23,7 @@ package org.gtri.util.scala.statemachine
 
 import org.scalatest.FunSpec
 import org.gtri.util.scala.statemachine._
-import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
+import org.gtri.util.scala.statemachine.Enumerator.STD_CHUNK_SIZE
 import scala.util.Random
 import test._
 import scala.collection.immutable.Seq
@@ -61,7 +61,7 @@ class TraversableEnumeratorTest extends FunSpec {
       val l : List[Int] = rnd.take(n).toList
       val e : Enumerator[Int] = l.toEnumerator
       val state0 = e.s0
-      val result = utility.forceDoneState(state0)
+      val result = utility.forceDoneTransition(Enumerator.Transition(state0))
       val isSuccess =
         result.state.fold(
           ifContinuation = { q => false },

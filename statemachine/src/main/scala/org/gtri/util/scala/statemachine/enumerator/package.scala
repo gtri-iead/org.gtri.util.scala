@@ -25,6 +25,8 @@ import IssueSeverityCode._
 import scala.collection.immutable.Seq
 
 package object Enumerator {
+  val STD_CHUNK_SIZE = 256
+
   type Transition[O]        = StateMachine.Transition[Unit, O, Unit]
   object Transition {
     def apply[O](

@@ -59,9 +59,10 @@ object impl {
    */
   def stepEnumerable[O,A](m : Enumerable[O,A]) : Transition[O,A] = stepEnumerableState(m.s0)
 
-  private[impl] def runEnumerableTransition[O,A](r0 : Transition[O,A], shouldRecover: State.Halted[O,A] => Boolean) : Transition[O,A] = {
+  private[impl] def runEnumerableTransition[O,A](r0 : Transition[O,A], _haltedRecoveryStrategy: HaltedRecoveryStrategy[Unit,O,A]) : (Transition[O,A], HaltedRecoveryStrategy[Unit,O,A]) = {
     var done = false
-    val r = utility.TransitionAccumulator(r0)
+    var r = utility.TransitionAccumulator(r0)
+    var haltedRecoveryStrategy = _haltedRecoveryStrategy
     do {
       r.state.fold(
         ifContinuation = { q =>
@@ -72,17 +73,17 @@ object impl {
           done = true
         },
         ifHalted = { q =>
-          // If state we can be and should be recovered
-          if(q.optRecover.isDefined && shouldRecover(q)) {
-            // Accumulate transition from recover
-            r.accumulate(q.optRecover.get.apply())
-          } else {
+          val (newHaltedRecoveryStrategy, recoveredTransition) = haltedRecoveryStrategy.recover(q)
+          haltedRecoveryStrategy = newHaltedRecoveryStrategy
+          r.accumulate(recoveredTransition)
+          if(r.state.isContinuation == false) {
             done = true
           }
+
         }
       )
     } while(done == false)
-    r.toTransition
+    (r.toTransition, haltedRecoveryStrategy)
   }
 
   // Previous functional implementation of runEnumerableTransition
@@ -98,21 +99,21 @@ object impl {
   /**
    * Step an Enumerable.State until it returns Success/Failure with the option to recover from all recoverable Failures
    * @param s
-   * @param shouldRecover TRUE to recover from Halted state
+   * @param haltedRecoveryStrategy
    * @tparam O
    * @tparam A
    * @return
    */
-  def runEnumerableState[O,A](s: State[O,A], shouldRecover: State.Halted[O,A] => Boolean) : Transition[O,A] = runEnumerableTransition(Transition(s), shouldRecover)
+  def runEnumerableState[O,A](s: State[O,A], haltedRecoveryStrategy: HaltedRecoveryStrategy[Unit,O,A]) : (Transition[O,A],HaltedRecoveryStrategy[Unit,O,A]) = runEnumerableTransition(Transition(s), haltedRecoveryStrategy)
 
   /**
    * Step an Enumerable until it returns Success/Failure with the option to recover from all recoverable Failures
    * @param m
-   * @param shouldRecover TRUE to recover from Halted state
+   * @param haltedRecoveryStrategy
    * @tparam O
    * @tparam A
    * @return
    */
-  def runEnumerable[O,A](m: Enumerable[O,A], shouldRecover: State.Halted[O,A] => Boolean) : Transition[O,A] = runEnumerableState(m.s0, shouldRecover)
+  def runEnumerable[O,A](m: Enumerable[O,A], haltedRecoveryStrategy: HaltedRecoveryStrategy[Unit,O,A]) : (Transition[O,A],HaltedRecoveryStrategy[Unit,O,A]) = runEnumerableState(m.s0, haltedRecoveryStrategy)
 
 }

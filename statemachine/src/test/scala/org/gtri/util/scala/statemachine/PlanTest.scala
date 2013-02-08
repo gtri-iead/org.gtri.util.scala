@@ -24,7 +24,7 @@ package org.gtri.util.scala.statemachine
 import org.scalatest.FunSpec
 import scala.util.Random
 import test._
-import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
+import org.gtri.util.scala.statemachine.Enumerator.STD_CHUNK_SIZE
 import scala.collection.immutable.Seq
 
 class PlanTest extends FunSpec {
@@ -69,7 +69,7 @@ class PlanTest extends FunSpec {
           case q: Plan.State.Success[Int] => false
         }
       assert(isRecover == true)
-      val result2 = result.state.run(shouldRecover = IssueRecoverStrategy.LAX)
+      val (result2,_) = result.state.run(HaltedRecoveryStrategy.LAX)
       val opt = result2.toOption
       assert(opt.isDefined && opt.get == sum)
     }
@@ -81,10 +81,29 @@ class PlanTest extends FunSpec {
       val t : Translator[Int,String] = TestIntToStringTranslator()  // (n * 2) + 2
       val i : Iteratee[String,String] = TestAppendStringIteratee() // (n * 2) + 2
       val eit : Plan[String] = e compose t compose i
-      val result = eit.run(shouldRecover = { _ => true })
-      val eMetadataCount = (n * 2) + ((n/5)*2)
-      val tMetadataCount = (n * 2) + 2
-      val iMetadataCount = (n * 2) + 2
+      val (result,_) = eit.run(HaltedRecoveryStrategy.LAX)
+
+      val metadataFromTestRecoverEnumerator = (n/5)*2
+      val metadataFromIssues = (n/5)
+      val metadataFromContinuation = n * 2
+      val totalMetadata = metadataFromTestRecoverEnumerator + metadataFromIssues + metadataFromContinuation
+
+      val eMetadataCount = {
+        val metadataFromTestRecoverEnumerator = (n/5)*2
+        val metadataFromIssues = (n/5)
+        val metadataFromContinuation = n * 2
+        metadataFromTestRecoverEnumerator + metadataFromIssues + metadataFromContinuation
+      }
+      val tMetadataCount = {
+        val metadataFromContinuation = n * 2
+        val metadataFromEOI = 2
+        metadataFromContinuation + metadataFromEOI
+      }
+      val iMetadataCount = {
+        val metadataFromContinuation = n * 2
+        val metadataFromEOI = 2
+        metadataFromContinuation + metadataFromEOI
+      }
       assert(result.metadata.length == (eMetadataCount + tMetadataCount + iMetadataCount))
     }
   }

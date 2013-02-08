@@ -21,16 +21,9 @@
 */
 package org.gtri.util.scala.statemachine
 
-import IssueSeverityCode._
+import scala.collection.immutable.Seq
 
-object IssueRecoverStrategy {
-  val STRICT = { (q: StateMachine.State.Halted[_,_,_]) => false }
-  val NORMAL = { (q: StateMachine.State.Halted[_,_,_]) =>
-    q.severityCode match {
-      case WARN => true
-      case ERROR => false
-      case FATAL => false
-    }
-  }
-  val LAX = { (q: StateMachine.State.Halted[_,_,_]) => true }
-}
+sealed trait Input[+A]
+sealed trait EndOfInput extends Input[Nothing]
+object EndOfInput extends EndOfInput
+case class Chunk[A](xs: Seq[A]) extends Input[A]

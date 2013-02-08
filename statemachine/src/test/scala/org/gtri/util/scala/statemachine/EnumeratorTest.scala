@@ -25,7 +25,7 @@ import org.scalatest.FunSpec
 import org.gtri.util.scala.statemachine._
 import scala.util.Random
 import test._
-import org.gtri.util.scala.statemachine.StateMachine.STD_CHUNK_SIZE
+import org.gtri.util.scala.statemachine.Enumerator.STD_CHUNK_SIZE
 import scala.collection.immutable.Seq
 
 class EnumeratorTest extends FunSpec {
@@ -59,15 +59,22 @@ class EnumeratorTest extends FunSpec {
           case q: Enumerator.State.Success[Int] => false
         }
       assert(isRecover == true)
-      val result2 = result.state.run(shouldRecover = { _ => true })
+      val (result2,_) = result.state.run(HaltedRecoveryStrategy.LAX)
       assert(result.output ++ result2.output == l)
     }
     it("should accumulate metadata") {
       val n = STD_CHUNK_SIZE * 2
       val l : List[Int] = rnd.take(n).toList
       val e : Enumerator[Int] = TestRecoverEnumerator(l)
-      val result = e.run(shouldRecover = { _ => true })
-      assert(result.metadata.length == (n * 2) + ((n / 5) * 2))
+      // chunks#=2
+      // first iter=recover +2 metadata
+      // second iter=continuation +2 metadata
+      val (result,_) = e.run(HaltedRecoveryStrategy.LAX)
+      val metadataFromTestRecoverEnumerator = (n/5)*2
+      val metadataFromIssues = (n/5)
+      val metadataFromContinuation = n * 2
+      val totalMetadata = metadataFromTestRecoverEnumerator + metadataFromIssues + metadataFromContinuation
+      assert(result.metadata.length == totalMetadata)
     }
   }
 }

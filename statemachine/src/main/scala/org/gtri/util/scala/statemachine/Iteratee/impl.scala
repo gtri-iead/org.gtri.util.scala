@@ -60,7 +60,7 @@ object impl {
         )
       },
       ifSuccess = { q =>
-        val transition = utility.applyInputToState(f(q.value),r.overflow,IssueRecoverStrategy.STRICT)
+        val transition = utility.applySeqToState(f(q.value),r.overflow)
         transition.copy(metadata = transition.metadata ++ r.metadata)
       },
       ifHalted = { q =>

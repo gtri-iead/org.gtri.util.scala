@@ -28,8 +28,6 @@ trait StateMachine[I,O,A] {
   def s0 : State[I,O,A]
 }
 object StateMachine {
-  val STD_CHUNK_SIZE = 256
-
   case class Transition[I,O,A](
     state         :   State[I,O,A],
     output        :   Seq[O]                        = Seq.empty,
@@ -103,7 +101,8 @@ object StateMachine {
 
     abstract class Continuation[I,O,A] extends State[I,O,A] {
 
-      def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applyInputToState(this, xs, IssueRecoverStrategy.STRICT)
+      def apply( i   : Input[I]   ) : Transition[I,O,A] = utility.applyInputToState(this, i)
+      def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applySeqToState(this, xs)
       def apply( x   : I          ) : Transition[I,O,A]
       def apply( x   : EndOfInput ) : Transition[I,O,A]
 
