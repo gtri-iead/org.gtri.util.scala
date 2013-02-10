@@ -38,7 +38,7 @@ object XmlReader {
 }
 case class XmlReader(
   in              :   InputStream,
-  chunkSize       :   Int               = StateMachine.STD_CHUNK_SIZE
+  chunkSize       :   Int               = Enumerator.STD_CHUNK_SIZE
 ) extends Enumerator[XmlEvent] {
   import XmlReader._
   import Enumerator._
@@ -50,7 +50,7 @@ case class XmlReader(
 
   def s0() = {
     log.block("s0") {
-        Cont(totalByteSize)
+        Cont()
 //      try {
 //        +"Trying to create reader"
 //        val result = factory.create()
@@ -69,7 +69,8 @@ case class XmlReader(
     }
   }
 
-  case class Cont(totalByteSize : Int) extends State.Continuation[XmlEvent] {
+//  case class Cont(totalByteSize : Int) extends State.Continuation[XmlEvent] {
+  case class Cont() extends State.Continuation[XmlEvent] {
 
     def apply(x : Unit) = {
       log.block("apply") {

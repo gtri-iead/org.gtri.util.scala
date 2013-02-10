@@ -73,7 +73,7 @@ object impl {
           done = true
         },
         ifHalted = { q =>
-          val (newHaltedRecoveryStrategy, recoveredTransition) = haltedRecoveryStrategy.recover(q)
+          val (newHaltedRecoveryStrategy, recoveredTransition) = haltedRecoveryStrategy.recoverAll(q)
           haltedRecoveryStrategy = newHaltedRecoveryStrategy
           r.accumulate(recoveredTransition)
           if(r.state.isContinuation == false) {

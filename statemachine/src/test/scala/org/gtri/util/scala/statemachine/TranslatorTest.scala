@@ -49,8 +49,8 @@ class TranslatorTest extends FunSpec {
       val t : Translator[Int,String] = TestIntToStringTranslator()
       val it : Iteratee[Int,String] = t compose i
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result = utility.forceDoneTransition(utility.applySeqToState(it.s0, l))
-      val optSum : Option[String] = result.toOption
+      val result = utility.forceDoneTransition(utility.applySeqToState(l, it.s0))
+      val optSum : Option[String] = result.state.toOption
       assert(optSum.isDefined && optSum.get == ls)
     }
     it("should accumulate metadata") {
@@ -79,7 +79,7 @@ class TranslatorTest extends FunSpec {
       val cba = 'z'.toByte to 'a'.toByte by -1 map { _.toChar.toString }
       val tr : Translator[String,String] = TestAlphaTranslator()
       // Note: utility functions called directly for testing purposes. An enumerator should be composed with the iteratee instead
-      val result : Translator.Transition[String,String] = utility.applySeqToState(tr.s0, abc.toList)
+      val result : Translator.Transition[String,String] = utility.applySeqToState(abc.toList,tr.s0)
       assert(result.output == cba)
     }
 

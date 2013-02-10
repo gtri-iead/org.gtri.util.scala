@@ -23,6 +23,11 @@ package org.gtri.util.scala.statemachine
 
 import scala.collection.immutable.Seq
 
+object Input {
+  def apply(eoi : EndOfInput) : Input[Nothing] = EndOfInput
+  def apply[A](x : A) : Input[A] = Chunk(Seq(x))
+  def apply[A](xs : Seq[A]) : Input[A] = Chunk(xs)
+}
 sealed trait Input[+A]
 sealed trait EndOfInput extends Input[Nothing]
 object EndOfInput extends EndOfInput

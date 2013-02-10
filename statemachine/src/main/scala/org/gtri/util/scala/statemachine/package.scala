@@ -42,21 +42,23 @@ package object statemachine {
     def toEnumerator(chunkSize : Int) = utility.TraversableEnumerator(self, chunkSize)
   }
 
-  implicit class implicitStateMachineTransitionOps[I,O,A](self : Transition[I,O,A]) {
-    def isSuccess = self.state.isSuccess
-    def isContinuation = self.state.isContinuation
-    def isHalted = self.state.isHalted
-
-    def toOption : Option[A] = self.state.toOption
-    def toOption(haltedRecoverStrategy : HaltedRecoveryStrategy[I,O,A]) : Option[A] = self.state.toOption(haltedRecoverStrategy)
-  }
+//  implicit class implicitStateMachineTransitionOps[I,O,A](self : Transition[I,O,A]) {
+//    def isSuccess = self.state.isSuccess
+//    def isContinuation = self.state.isContinuation
+//    def isHalted = self.state.isHalted
+//    def isRecoverable = self.state.isRecoverable
+//    def toOption : Option[A] = self.state.toOption
+//    def toOption(haltedRecoverStrategy : HaltedRecoveryStrategy[I,O,A]) : Option[A] = self.state.toOption(haltedRecoverStrategy)
+//  }
 
   implicit class implicitStateMachineStateOps[I,O,A](self: State[I,O,A]) {
     def isSuccess = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => true }, ifHalted = { _ => false})
     def isContinuation = self.fold(ifContinuation = { _ => true }, ifSuccess = { _ => false }, ifHalted = { _ => false })
     def isHalted = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => false }, ifHalted = { _ => true })
+    def isRecoverable = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => false }, ifHalted = { q => q.optRecover.isDefined })
 
     def compose[OO,AA](that: State[O,OO,AA]) : State[I,OO,AA] = utility.composeStates(self, that)
+
     def toOption : Option[A] = {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
@@ -68,11 +70,20 @@ package object statemachine {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
         case q : State.Halted[I,O,A] =>
-          val (_,r) = haltedRecoverStrategy.recover(q)
+          val (_,r) = haltedRecoverStrategy.recoverAll(q)
           r.state.toOption
         case q : State.Continuation[I,O,A] => None
       }
     }
+  }
+
+//  implicit class implicitHaltedStateOps[I,O,A](self : State.Halted[I,O,A]) {
+//    def recover : Transition[I,O,A] = self.optRecover map { recover => recover() } getOrElse Transition(self)
+//    def recoverAll : Transition[I,O,A] = self.optRecover map { recover => utility.recoverAll(recover(),)}
+//  }
+
+  implicit class implicitStateMachineFromState[I,O,A](self : State[I,O,A]) extends StateMachine[I,O,A] {
+    def s0 = self
   }
 
   implicit class implicitStateMachineOps[I,O,A](self: StateMachine[I,O,A]) {
@@ -100,6 +111,17 @@ package object statemachine {
     def map[B](f: A => B) : Iteratee[I,B] = Iteratee.impl.mapIteratee(self, f)
   }
 
+  implicit class implicitIterateeContinuationFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee.State.Continuation[I,A] {
+    override def apply(i: Input[I]) : Iteratee.Transition[I,A] = f(i)
+    override def apply(xs: Seq[I]) : Iteratee.Transition[I,A] = f(Input(xs))
+    def apply(x: I) : Iteratee.Transition[I,A] = f(Input(x))
+    def apply(x: EndOfInput) : Iteratee.Transition[I,A] = f(EndOfInput)
+  }
+
+  implicit class implicitIterateeFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee[I,A] {
+    def s0 = f
+  }
+
   implicit class implicitStateMachineStateTuple2[A,B,C](tuple: (State[Unit,A,_], State[A,B,C])) {
     def state = tuple._1 compose tuple._2
   }
@@ -116,37 +138,4 @@ package object statemachine {
     def s0 = tuple._1.s0 compose tuple._2.s0 compose tuple._3.s0
   }
 
-  // TODO: Should this be I => Transition[I,Unit,A]?
-//  implicit class implicitSimpleDoneIteratee[I,A](f: I => State.Done[I,Unit,A]) extends Iteratee[I,A] {
-//    import Iteratee._
-//    case class Cont() extends State.Continuation[I,A] {
-//      override def apply(xs : Seq[I]) = {
-//        if(xs.nonEmpty) {
-//          Transition(
-//            state = f(xs(0)),
-//            overflow = xs
-//          )
-//        } else {
-//          Transition(
-//            state = this
-//          )
-//        }
-//      }
-//      def apply(x : I) = Transition(
-//        state = f(x),
-//        overflow = x :: Nil
-//      )
-//      def apply(eoi : EndOfInput) = Halt.fatal("Input required")
-//    }
-//    def s0 = Cont()
-//  }
-
-//  implicit class implicitSimpleTransitionIteratee[I,A](f: I => Transition[I,Unit,A]) extends Iteratee[I,A] {
-//    import Iteratee._
-//    case class Cont() extends State.Continuation[I,A] {
-//      def apply(x : I) = f(x)
-//      def apply(eoi : EndOfInput) = Halt.fatal("Input required")
-//    }
-//    def s0 = Cont()
-//  }
 }

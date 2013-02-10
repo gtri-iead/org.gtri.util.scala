@@ -28,7 +28,7 @@ trait StateMachine[I,O,A] {
   def s0 : State[I,O,A]
 }
 object StateMachine {
-  case class Transition[I,O,A](
+  final case class Transition[I,O,A](
     state         :   State[I,O,A],
     output        :   Seq[O]                        = Seq.empty,
     overflow      :   Seq[I]                        = Seq.empty,
@@ -99,10 +99,10 @@ object StateMachine {
       ) : X
     }
 
-    abstract class Continuation[I,O,A] extends State[I,O,A] {
+    trait Continuation[I,O,A] extends State[I,O,A] {
 
-      def apply( i   : Input[I]   ) : Transition[I,O,A] = utility.applyInputToState(this, i)
-      def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applySeqToState(this, xs)
+      def apply( i   : Input[I]   ) : Transition[I,O,A] = utility.applyInputToState(i,this)
+      def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applySeqToState(xs,this)
       def apply( x   : I          ) : Transition[I,O,A]
       def apply( x   : EndOfInput ) : Transition[I,O,A]
 

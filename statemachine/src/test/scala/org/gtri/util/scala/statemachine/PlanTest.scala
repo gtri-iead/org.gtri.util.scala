@@ -39,7 +39,7 @@ class PlanTest extends FunSpec {
       val i : Iteratee[Int,Int] = TestSumIntIteratee()
       val ei : Plan[Int] = e compose i
       val result = ei.run()
-      val opt = result.toOption
+      val opt = result.state.toOption
       assert(opt.isDefined && opt.get == sum)
     }
     it("should be composable from an Enumerator, any number of Translators and an Iteratee") {
@@ -51,7 +51,7 @@ class PlanTest extends FunSpec {
       val i : Iteratee[String,String] = TestAppendStringIteratee()
       val eit : Plan[String] = e compose t compose i
       val result = eit.run()
-      val opt = result.toOption
+      val opt = result.state.toOption
       assert(opt.isDefined && opt.get == sum)
     }
     it("should be able to recover from failure") {
@@ -70,7 +70,7 @@ class PlanTest extends FunSpec {
         }
       assert(isRecover == true)
       val (result2,_) = result.state.run(HaltedRecoveryStrategy.LAX)
-      val opt = result2.toOption
+      val opt = result2.state.toOption
       assert(opt.isDefined && opt.get == sum)
     }
     it("should accumulate metadata") {

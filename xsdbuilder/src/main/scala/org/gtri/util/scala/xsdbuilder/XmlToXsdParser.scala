@@ -32,8 +32,9 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
   def s0 = NoContextParser()
 
   import Translator._
-  type Parser = State.Continuation[XmlEvent,XsdEvent]
-  type PartialParser = PartialFunction[XmlEvent,Transition[XmlEvent,XsdEvent]]
+  type ParserDelta = Transition[XmlEvent,XsdEvent]
+  type ParserState = State.Continuation[XmlEvent,XsdEvent]
+  type PartialParser = PartialFunction[XmlEvent,ParserDelta]
 
   /**
    * Parser to ignore an element. If a further child element with the same qName is encountered, parser will recurse on
@@ -42,7 +43,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param qName
    * @param parent
    */
-  case class IgnoreElementParser(qName : XsdQName, parent : Parser) extends Parser {
+  case class IgnoreElementParser(qName : XsdQName, parent : ParserState) extends ParserState {
     def apply(event : XmlEvent) = {
       event match {
         case add@StartXmlElementEvent(element, locator) if element.qName == qName =>
@@ -62,7 +63,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param next
    * @return
    */
-  def guardUnexpectedXmlEvent(next : => Parser) : PartialParser = {
+  def guardUnexpectedXmlEvent(next : => ParserState) : PartialParser = {
     // Handle start of unexpected element
     case ev@StartXmlElementEvent(element, locator) =>
       Halt.error(
@@ -90,7 +91,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param next
    * @return
    */
-  def parseLexicalEvents(next: => Parser) : PartialParser = {
+  def parseLexicalEvents(next: => ParserState) : PartialParser = {
     // Turn whitespace into lexical event
     case ev@AddXmlTextEvent(text, locator) if text.matches("\\s+") =>
       Continue(
@@ -105,13 +106,37 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
       )
   }
 
+  def mapHaltedRecover[E <: XsdElement](s: Plan.State[E]) : ParserDelta = {
+    s match {
+      case q : Plan.State.Continuation[E] =>
+        Halt.fatal("Failed to parse " + element)
+      case q:  Plan.State.Success[E] =>
+        val startEvent = StartXsdEvent(q.value,locator)
+        Continue(
+          state = next(startEvent),
+          output = startEvent :: Nil
+        )
+      case q:  Plan.State.Halted[E] =>
+        Transition(
+          state = Halted(
+            issues = q.issues,
+            optRecover = q.optRecover map { recover => () =>
+              val r0 : Plan.Transition[E] = recover()
+
+              val retv : Transition[XmlEvent,XsdEvent] = Halt.fatal("")
+              retv
+            }
+          )
+        )
+    }
+  }
   /**
    * PartialParser to parse the start of an Xml Element
    * @param next
    * @param util
    * @return
    */
-  def createStartElementParser[E <: XsdElement](next: StartXsdEvent => Parser, util : XsdElementUtil[E]) : PartialParser = {
+  def createStartElementParser[E <: XsdElement](next: StartXsdEvent => ParserState, util : XsdElementUtil[E]) : PartialParser = {
     case ev@StartXmlElementEvent(element, locator) if element.qName == util.qName =>
       val plan : Plan[E] = List(element).toEnumerator compose util.parser
       val result : Plan.Transition[E] = plan.run()
@@ -145,7 +170,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param next
    * @return
    */
-  def createEndEventParser(e : XsdElement, next: EndXsdEvent => Parser) : PartialParser = {
+  def createEndEventParser(e : XsdElement, next: EndXsdEvent => ParserState) : PartialParser = {
     case ev@EndXmlElementEvent(eventQName, locator) if eventQName == e.qName =>
       val endEvent = EndXsdEvent(e,locator)
       Continue(
@@ -159,7 +184,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param next
    * @return
    */
-  def parseStartDocEvent(next: => Parser) : PartialParser = {
+  def parseStartDocEvent(next: => ParserState) : PartialParser = {
     case StartXmlDocumentEvent(encoding, version, isStandAlone, characterEncodingScheme, locator) =>
       Continue(
         state = next,
@@ -172,7 +197,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param next
    * @return
    */
-  def parseEndDocEvent(next: => Parser) : PartialParser = {
+  def parseEndDocEvent(next: => ParserState) : PartialParser = {
     case EndXmlDocumentEvent(locator) =>
       Continue(
         state = next,
@@ -183,7 +208,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
   /**
    * Parser for the starting context - awaiting the StartXmlDocumentEvent
    */
-  case class NoContextParser() extends Parser {
+  case class NoContextParser() extends ParserState {
     private val doApply = (
         parseStartDocEvent(DocRootParser(this))
         orElse guardUnexpectedXmlEvent(this)
@@ -200,7 +225,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * Parser for the document root - awaiting the xsd:schema element
    * @param parent
    */
-  case class DocRootParser(parent : Parser) extends Parser {
+  case class DocRootParser(parent : ParserState) extends ParserState {
     private val doApply = (
       createStartElementParser(
         { event =>
@@ -229,7 +254,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param item
    * @param children
    */
-  case class ElementParser(util : XsdElementUtil[XsdElement], parent : Parser, item : XsdElement, children : Seq[XsdElementUtil[XsdElement]] = Seq.empty) extends Parser {
+  case class ElementParser(util : XsdElementUtil[XsdElement], parent : ParserState, item : XsdElement, children : Seq[XsdElementUtil[XsdElement]] = Seq.empty) extends ParserState {
     val doApply : PartialParser = {
       val endEventParser = createEndEventParser(item, { _ => parent })
       val childParsers =
