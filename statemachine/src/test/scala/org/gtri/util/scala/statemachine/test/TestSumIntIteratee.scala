@@ -33,7 +33,6 @@ case class TestSumIntIteratee(maxN : Int = Int.MaxValue) extends Iteratee[Int, I
   import TestSumIntIteratee._
   case class Cont(n : Int, loopState : Int) extends State.Continuation[Int, Int] {
     def apply(item : Int) = {
-//      println(s"n=$n item=$item")
       if(n < maxN) {
         Continue(
           state = new Cont(n + 1,loopState + item),

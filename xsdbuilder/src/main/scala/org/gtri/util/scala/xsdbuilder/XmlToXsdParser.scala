@@ -106,30 +106,6 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
       )
   }
 
-  def mapHaltedRecover[E <: XsdElement](s: Plan.State[E]) : ParserDelta = {
-    s match {
-      case q : Plan.State.Continuation[E] =>
-        Halt.fatal("Failed to parse " + element)
-      case q:  Plan.State.Success[E] =>
-        val startEvent = StartXsdEvent(q.value,locator)
-        Continue(
-          state = next(startEvent),
-          output = startEvent :: Nil
-        )
-      case q:  Plan.State.Halted[E] =>
-        Transition(
-          state = Halted(
-            issues = q.issues,
-            optRecover = q.optRecover map { recover => () =>
-              val r0 : Plan.Transition[E] = recover()
-
-              val retv : Transition[XmlEvent,XsdEvent] = Halt.fatal("")
-              retv
-            }
-          )
-        )
-    }
-  }
   /**
    * PartialParser to parse the start of an Xml Element
    * @param next
@@ -140,7 +116,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
     case ev@StartXmlElementEvent(element, locator) if element.qName == util.qName =>
       val plan : Plan[E] = List(element).toEnumerator compose util.parser
       val result : Plan.Transition[E] = plan.run()
-      result.state match {
+      def mapHaltedRecover : Plan.State[E] => ParserDelta = {
         case q : Plan.State.Continuation[E] =>
           Halt.fatal("Failed to parse " + element)
         case q:  Plan.State.Success[E] =>
@@ -154,14 +130,12 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
             state = Halted(
               issues = q.issues,
               optRecover = q.optRecover map { recover => () =>
-                val r0 : Plan.Transition[E] = recover()
-
-                val retv : Transition[XmlEvent,XsdEvent] = Halt.fatal("")
-                retv
+                mapHaltedRecover(recover().state)
               }
             )
           )
       }
+      mapHaltedRecover(result.state)
   }
 
   /**

@@ -6,25 +6,18 @@ import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
 import org.gtri.util.scala.xmlbuilder.XmlElement
 
-case class XsdAppInfo(
-  source    :   Option[XsdAnyURI]             = None,
+final case class XsdAppInfo(
+  optSource    :   Option[XsdAnyURI]             = None,
   optMetadata  :   Option[XsdElement.Metadata]   = None
 ) extends XsdElement {
 
   def qName = XsdAppInfo.util.qName
 
-  def value = None
+  def optValue = None
 
   def toAttributes = {
-    source.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList
+    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList
   }
-
-//  def pushTo(contract: XsdContract) {
-//    contract.addXsdAppInfo(
-//      /* XsdAnyURI _source => */source.orNull,
-//      /* ImmutableMap<XsdNCName, XsdAnyURI> _prefixToNamespaceURIMap  => */prefixToNamespaceURIMap
-//    )
-//  }
 
 }
 
@@ -37,20 +30,15 @@ object XsdAppInfo {
     def parser[EE >: XsdAppInfo] : Iteratee[XmlElement,EE] = {
       for{
         element <- QNamePeekParser(qName)
-        source <- OptionalAttributePeekParser(ATTRIBUTES.SOURCE.QNAME, XsdAnyURI.parseString)
+        optSource <- OptionalAttributePeekParser(ATTRIBUTES.SOURCE.QNAME, XsdAnyURI.parseString)
       } yield
           XsdAppInfo(
-            source = source,
+            optSource = optSource,
             optMetadata = Some(XsdElement.Metadata(element))
           )
     }
 
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq()
-
-//    def downcast(element: XsdElement) : Option[XsdAppInfo] = element match {
-//      case e : XsdAppInfo => Some(e)
-//      case _ => None
-//    }
   }
 }

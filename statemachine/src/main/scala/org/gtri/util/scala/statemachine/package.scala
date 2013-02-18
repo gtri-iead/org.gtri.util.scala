@@ -28,8 +28,8 @@ package object statemachine {
   type  EOI               =   EndOfInput
   val   EOI               =   EndOfInput
 
-  type  ∅                 =   Unit
-  val   ∅                 =   Unit
+//  type  ∅                 =   Unit
+//  val   ∅                 =   Unit
 
   type  Enumerator[O]     =   StateMachine[Unit,O,Unit]
   type  Enumerable[O,A]   =   StateMachine[Unit,O,A]
@@ -37,7 +37,9 @@ package object statemachine {
   type  Translator[I,O]   =   StateMachine[I,O,Unit]
   type  Plan[A]           =   StateMachine[Unit,Unit,A]
 
-  implicit class traversableToEnumerator[A](self: Traversable[A]) {
+  type  Parser[I,A]       =   I => Parser.Transition[A]
+
+  implicit class traversableToEnumerator[A](val self: Traversable[A]) extends AnyVal {
     def toEnumerator = utility.TraversableEnumerator(self, Enumerator.STD_CHUNK_SIZE)
     def toEnumerator(chunkSize : Int) = utility.TraversableEnumerator(self, chunkSize)
   }
@@ -51,7 +53,7 @@ package object statemachine {
 //    def toOption(haltedRecoverStrategy : HaltedRecoveryStrategy[I,O,A]) : Option[A] = self.state.toOption(haltedRecoverStrategy)
 //  }
 
-  implicit class implicitStateMachineStateOps[I,O,A](self: State[I,O,A]) {
+  implicit class implicitStateOps[I,O,A](val self: State[I,O,A]) extends AnyVal {
     def isSuccess = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => true }, ifHalted = { _ => false})
     def isContinuation = self.fold(ifContinuation = { _ => true }, ifSuccess = { _ => false }, ifHalted = { _ => false })
     def isHalted = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => false }, ifHalted = { _ => true })
@@ -70,11 +72,15 @@ package object statemachine {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
         case q : State.Halted[I,O,A] =>
-          val (_,r) = haltedRecoverStrategy.recoverAll(q)
+          val (r,_) = haltedRecoverStrategy.recoverAll(q)
           r.state.toOption
         case q : State.Continuation[I,O,A] => None
       }
     }
+  }
+
+  implicit class implicitContinuationStateOps[I,O,A](val self : State.Continuation[I,O,A]) extends AnyVal {
+    def apply(i: Input[I]) = utility.applyInputToState(i, self)
   }
 
 //  implicit class implicitHaltedStateOps[I,O,A](self : State.Halted[I,O,A]) {
@@ -86,33 +92,52 @@ package object statemachine {
     def s0 = self
   }
 
-  implicit class implicitStateMachineOps[I,O,A](self: StateMachine[I,O,A]) {
+  implicit class implicitStateMachineOps[I,O,A](val self: StateMachine[I,O,A]) extends AnyVal {
     def compose[OO,AA](that: StateMachine[O,OO,AA]) : StateMachine[I,OO,AA] = utility.composeStateMachines(self, that)
   }
 
-  implicit class implicitEnumerableStateOps[O,A](self: Enumerable.State[O,A]) {
+  implicit class implicitEnumerableStateOps[O,A](val self: Enumerable.State[O,A]) extends AnyVal {
     def step() = Enumerable.impl.stepEnumerableState(self)
     def run() = Enumerable.impl.runEnumerableState(self, HaltedRecoveryStrategy.STRICT[Unit,O,A])._1
     def run(haltedRecoveryStrategy : HaltedRecoveryStrategy[Unit,O,A]) = Enumerable.impl.runEnumerableState(self, haltedRecoveryStrategy)
   }
 
-  implicit class implicitEnumerableStateMachineOps[O,A](self: Enumerable[O,A]) {
+  implicit class implicitEnumerableStateMachineOps[O,A](val self: Enumerable[O,A]) extends AnyVal {
     def run() = Enumerable.impl.runEnumerableState(self.s0, HaltedRecoveryStrategy.STRICT[Unit,O,A])._1
     def run(haltedRecoveryStrategy : HaltedRecoveryStrategy[Unit,O,A]) = Enumerable.impl.runEnumerableState(self.s0, haltedRecoveryStrategy)
   }
 
-  implicit class implicitIterateeStateOps[I,A](self: Iteratee.State[I,A]) {
+  implicit class implicitIterateeStateOps[I,A](val self: Iteratee.State[I,A]) extends AnyVal {
     def flatMap[B](f: A => Iteratee.State[I,B]) : Iteratee.State[I,B] = Iteratee.impl.flatMapIterateeState(self, f)
     def map[B](f: A => B) : Iteratee.State[I,B] = Iteratee.impl.mapIterateeState(self, f)
   }
 
-  implicit class implicitIterateeOps[I,A](self: Iteratee[I,A]) {
+  implicit class implicitIterateeOps[I,A](val self: Iteratee[I,A]) extends AnyVal {
     def flatMap[B](f: A => Iteratee[I,B]) : Iteratee[I,B] = Iteratee.impl.flatMapIteratee(self, f)
     def map[B](f: A => B) : Iteratee[I,B] = Iteratee.impl.mapIteratee(self, f)
   }
 
+//  implicit class implicitPlanStateOps[A](self: Plan.State[A]) {
+//    def flatMap[II,OO,BB](f: A => StateMachine.State[II,OO,BB]) : StateMachine.State[II,OO,BB] = Plan.impl.flatMapPlanState(self, f)
+//    def map[II,OO,BB](f: A => BB) : StateMachine.State[II,OO,BB] = Plan.impl.mapPlanState(self, f)
+//  }
+//
+//  implicit class implicitPlanOps[A](self: Plan[A]) {
+//    def flatMap[II,OO,BB](f: A => StateMachine[II,OO,BB]) : StateMachine[II,OO,BB] = Plan.impl.flatMapPlan[A,II,OO,BB](self, f)
+//    def map[II,OO,BB](f: A => BB) : StateMachine[II,OO,BB] = Plan.impl.mapPlan[A,II,OO,BB](self, f)
+//  }
+
+  implicit class implicitParserTransitionOps[A](val self: Parser.Transition[A]) extends AnyVal {
+    def flatMap[B](f: A => Parser.Transition[B]) : Parser.Transition[B] = Parser.impl.flatMapParserTransition(self,f)
+    def map[B](f: A => B) : Parser.Transition[B] = Parser.impl.mapParserTransition(self,f)
+
+    def toTranslator[I](ifSuccess : => Translator.State[I,A]) : Translator.Transition[I,A] = Parser.impl.parserTransitionToTranslatorTransition(self, ifSuccess)
+    def toIteratee[I] : Iteratee.Transition[I,A] = Parser.impl.parserTransitionToIterateeTransition(self)
+  }
+
   implicit class implicitIterateeContinuationFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee.State.Continuation[I,A] {
-    override def apply(i: Input[I]) : Iteratee.Transition[I,A] = f(i)
+//    override def apply(i: Input[I]) : Iteratee.Transition[I,A] = f(i)
+    def apply(i: Input[I]) : Iteratee.Transition[I,A] = f(i)
     override def apply(xs: Seq[I]) : Iteratee.Transition[I,A] = f(Input(xs))
     def apply(x: I) : Iteratee.Transition[I,A] = f(Input(x))
     def apply(x: EndOfInput) : Iteratee.Transition[I,A] = f(EndOfInput)
@@ -122,7 +147,7 @@ package object statemachine {
     def s0 = f
   }
 
-  implicit class implicitStateMachineStateTuple2[A,B,C](tuple: (State[Unit,A,_], State[A,B,C])) {
+  implicit class implicitStateMachineStateTuple2[A,B,C](val tuple: (State[Unit,A,_], State[A,B,C])) extends AnyVal {
     def state = tuple._1 compose tuple._2
   }
 
@@ -130,7 +155,7 @@ package object statemachine {
     def s0 = tuple._1.s0 compose tuple._2.s0
   }
 
-  implicit class implicitStateMachineStateTuple3[A,B,C,D](tuple: (State[Unit,A,_], State[A,B,_], State[B,C,D])) {
+  implicit class implicitStateMachineStateTuple3[A,B,C,D](val tuple: (State[Unit,A,_], State[A,B,_], State[B,C,D])) extends AnyVal {
     def state = tuple._1 compose tuple._2 compose tuple._3
   }
 

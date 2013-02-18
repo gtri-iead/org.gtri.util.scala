@@ -88,15 +88,15 @@ case class StartXmlElementEvent(
 //      ~"Build attributes"
 //      val attributes = {
 //        val builder = ImmutableMap.builder[XsdQName, String]()
-//        for ((name, value) <- element.attributesMap) {
-//          builder.put(name, value)
+//        for ((name, optValue) <- element.attributesMap) {
+//          builder.put(name, optValue)
 //        }
 //        builder.build()
 //      }
 //      val qName = element.qName
-//      val value = element.value.orNull
-//      ~s"contract.addXmlElement($qName, $value, $attributes, $prefixToNamespaceURIMap)"
-//      contract.addXmlElement(qName, value, attributes, prefixToNamespaceURIMap)
+//      val optValue = element.optValue.orNull
+//      ~s"contract.addXmlElement($qName, $optValue, $attributes, $prefixToNamespaceURIMap)"
+//      contract.addXmlElement(qName, optValue, attributes, prefixToNamespaceURIMap)
 //    }
 //  }
 //}

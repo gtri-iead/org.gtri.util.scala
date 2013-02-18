@@ -127,3 +127,25 @@ Feb 6
 #1: Added Input[A], fixed problems with recovering Halted states that this addition exposed
 #2: Renamed IssueRecoveryStrategy to HaltedRecoveryStrategy
 #3: Redesigned HaltedRecoveryStrategy to combine the accumulator and transition function into a single strategy object
+
+Feb 11
+#1: Removed Continuation.apply(Input[A]) and added as implicit
+#2: Swapped return parameters for HaltedRecoveryStrategy.recoverXXX to align with Enumerable.impl.runEnumerable
+
+Feb 12
+#1: I need a way to combine the outputs of single input parsers (A => Iteratee.Done[A,B]) into an arbitrary Transition output
+#1a: The problem is that if the single input parser returns Halted the encapsulating output should also return a Halted that will recover the inner Halted and then proceed with further processing
+#1b: Using A => Iteratee.Done[A,B] almost works except that optRecover () => Transition[A,B] can return a Continuation among other invalid states
+
+Feb 16
+#1: Using I => Plan.State.Done[A] as a "parser"
+#1aa: Main issue with this is that the recover for a plan returns a Transition, which is meaningless for Parser
+
+Feb 17
+#1: Working on Parser
+#1a: What's my goal here?
+#1aa: I'm trying to create composable parser results - given a bunch of parsers that have all received some input and produced a result, I need to compose the results such that if any of the results are Halted, then the composed result is Halted
+#1ab: I also need an idiomatic way to convert a parser result to either an Iteratee or a Translator Transition
+#2: Where possible converted implicit classes to implicit value classes to eliminate unboxing
+#3: Should I convert Transition to a sealed trait base class and move parameters to their appropriate sub-types?
+#3aa: This is will result in a large rewrite of the code base

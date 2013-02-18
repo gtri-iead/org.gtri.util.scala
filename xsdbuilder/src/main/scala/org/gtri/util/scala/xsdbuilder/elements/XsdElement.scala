@@ -5,8 +5,9 @@ import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.xsddatatypes.{XsdQName, XsdAnyURI, XsdNCName}
 
 trait XsdElement {
-  def   qName       :   XsdQName
-  def   value       :   Option[String]
+  def   util           :   XsdElementUtil[_]
+  def   qName          :   XsdQName
+  def   optValue       :   Option[String]
   def   optMetadata    :   Option[XsdElement.Metadata]
 
   lazy val prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI] = {
@@ -16,22 +17,27 @@ trait XsdElement {
         prefixToNamespaceURIMap <- metadata.optPrefixToNamespaceURIMap
       } yield prefixToNamespaceURIMap
     o.getOrElse(Map.empty)
-//    if(metadata.isDefined && metadata.get.prefixToNamespaceURIMap.isDefined) {
-//      metadata.get.prefixToNamespaceURIMap.get
-//    } else {
-//      Map.empty
-//    }
   }
-//  def pushTo(contract : XsdContract)
 
-  def toAttributes    : Seq[(XsdQName,String)]
-  def toXmlElement = XmlElement(
+  def toAttributes : Seq[(XsdQName,Any)] = {
+    for {
+      key <- util.qNameToXsdAttributeMap.keySet.toSeq
+      value <- getAttributeValue(key)
+    } yield (key,value)
+  }
+
+  def toXmlElement = {
+
+    XmlElement(
       qName                     =   qName,
-      value                     =   value,
-      attributesMap             =   toAttributes.toMap,
+      optValue                  =   optValue,
+      attributesMap             =   (toAttributes map { tuple => (tuple._1,tuple._2.toString) }).toMap,
       prefixToNamespaceURIMap   =   prefixToNamespaceURIMap,
       optMetadata               =   optMetadata map { _.toXmlElementMetadata }
     )
+  }
+
+  def getAttributeValue(qName : XsdQName) : Option[Any]
 }
 
 object XsdElement {

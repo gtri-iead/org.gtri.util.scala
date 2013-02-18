@@ -10,6 +10,8 @@ scalacOptions ++= Seq("-feature", "-unchecked", "-deprecation")
 
 resolvers += "iead-all" at "https://iead.ittl.gtri.org/artifactory/all" // need this for getting IEAD artifacts
 
+resolvers += Resolver.file("my-local-repo", file("c:/users/lance/.ivy2/cache")) transactional()
+
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.0.M5b"
 
 libraryDependencies += "org.gtri.util" % "xsddatatypes" % "1.0-SNAPSHOT"

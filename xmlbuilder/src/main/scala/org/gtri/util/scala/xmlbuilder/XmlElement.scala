@@ -22,8 +22,8 @@
 package org.gtri.util.scala.xmlbuilder
 
 import org.gtri.util.scala.exelog.noop._
-import org.gtri.util.xsddatatypes.{XsdAnyURI, XsdNCName, XsdQName}
-import org.gtri.util.xsddatatypes.XsdQName.NamespaceURIToPrefixResolver
+import org.gtri.util.xsddatatypes._
+import org.gtri.util.xsddatatypes.XsdQName._
 import org.gtri.util.scala.xmlbuilder.XmlElement.Metadata
 
 
@@ -41,12 +41,12 @@ object XmlElement {
 
   def apply(
     qName                   :   XsdQName,
-    value                   :   Option[String],
+    optValue                :   Option[String],
     attributes              :   Seq[(XsdQName, String)],
     prefixes                :   Seq[(XsdNCName, XsdAnyURI)]
   ) = new XmlElement(
     qName                     =   qName,
-    value                     =   value,
+    optValue                  =   optValue,
     attributesMap             =   attributes.toMap,
     prefixToNamespaceURIMap   =   prefixes.toMap,
     optMetadata               =   Some(Metadata(
@@ -58,13 +58,13 @@ object XmlElement {
   )
   def apply(
     qName                   :   XsdQName,
-    value                   :   Option[String],
+    optValue                :   Option[String],
     attributes              :   Seq[(XsdQName, String)],
     prefixes                :   Seq[(XsdNCName, XsdAnyURI)],
     optLocator              :   Option[DiagnosticLocator]
   ) = new XmlElement(
     qName                     =   qName,
-    value                     =   value,
+    optValue                  =   optValue,
     attributesMap             =   attributes.toMap,
     prefixToNamespaceURIMap   =   prefixes.toMap,
     optMetadata               =   Some(Metadata(
@@ -76,14 +76,14 @@ object XmlElement {
   )
   def apply(
     qName                   :   XsdQName,
-    value                   :   Option[String],
+    optValue                :   Option[String],
     attributes              :   Seq[(XsdQName, String)],
     prefixes                :   Seq[(XsdNCName, XsdAnyURI)],
     optLocator              :   Option[DiagnosticLocator],
     optRawAttributes        :   Option[Seq[(String,String)]]
   ) = new XmlElement(
     qName                     =   qName,
-    value                     =   value,
+    optValue                  =   optValue,
     attributesMap             =   attributes.toMap,
     prefixToNamespaceURIMap   =   prefixes.toMap,
     optMetadata               =   Some(Metadata(
@@ -96,11 +96,11 @@ object XmlElement {
 }
 case class XmlElement(
   qName                     :  XsdQName,
-  value                     :  Option[String]                  = None,
+  optValue                  :  Option[String]                  = None,
   attributesMap             :  Map[XsdQName, String]           = Map.empty,
   prefixToNamespaceURIMap   :  Map[XsdNCName, XsdAnyURI]       = Map.empty,
   optMetadata                  :  Option[Metadata]             = None
-)extends NamespaceURIToPrefixResolver {
+)extends NamespaceURIToPrefixResolver with PrefixToNamespaceURIResolver {
 
   lazy val metadataOrderedAttributes : Option[Seq[(XsdQName,String)]] =
     for{
@@ -129,7 +129,7 @@ case class XmlElement(
 //      if(optMetadata.isDefined && optMetadata.get.optAttributesOrder.isDefined) {
 //        ~"Sort by optMetadata attributesOrder"
 //        optMetadata.get.optAttributesOrder.get.map({
-//          qName => attributesMap.get(qName).map { value => (qName,value) }
+//          qName => attributesMap.get(qName).map { optValue => (qName,optValue) }
 //        }).flatten
 //      } else {
 //        ~"Sort by name lexographically"
@@ -170,7 +170,7 @@ case class XmlElement(
   lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
 
   def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) =
-    // Convert to Map[XsdNCName, Boolean] that is true if it matches namespaceURI and provide a default value false if prefix isn't mapped
+    // Convert to Map[XsdNCName, Boolean] that is true if it matches namespaceURI and provide a default optValue false if prefix isn't mapped
     prefixToNamespaceURIMap mapValues { _ == namespaceURI } getOrElse(prefix, false)
 
 //  {
@@ -186,4 +186,6 @@ case class XmlElement(
 //  }
 
   def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = namespaceURIToPrefixMap.get(namespaceURI).orNull
+
+  def getNamespaceURIForPrefix(prefix : XsdNCName) = prefixToNamespaceURIMap.get(prefix).orNull
 }

@@ -75,20 +75,20 @@ package object Iteratee {
       recover     :   () => Transition[I,A],
       overflow    :   Seq[I]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[I,Unit,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), overflow=overflow, metadata=metadata)
+    ) = StateMachine.Halt.warn[I,Unit,A](message=message, cause=cause, recover=recover, overflow=overflow, metadata=metadata)
     def error[I,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       recover     :   () => Transition[I,A],
       overflow    :   Seq[I]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[I,Unit,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), overflow=overflow, metadata=metadata)
+    ) = StateMachine.Halt.error[I,Unit,A](message=message, cause=cause, recover=recover, overflow=overflow, metadata=metadata)
     def fatal[I,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       overflow    :   Seq[I]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[I,Unit,A](issues=Seq(Issue.fatal(message,cause)), overflow=overflow, metadata=metadata)
+    ) = StateMachine.Halt.fatal[I,Unit,A](message=message, cause=cause, overflow=overflow, metadata=metadata)
   }
 
   def peek[A] : Iteratee[A,A] = impl.peek[A]

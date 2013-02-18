@@ -172,7 +172,7 @@ case class XmlReader(
             ~s"reader.next()"
             reader.next()
             val (value, peekQueue) = peekParseElementValue()
-            ~s"Peek parsed value=$value peekQueue=$peekQueue"
+            ~s"Peek parsed optValue=$value peekQueue=$peekQueue"
             val retv = peekQueue :::
               StartXmlElementEvent(XmlElement(qName, value, attributes, prefixes, Some(locator)), locator) :: Nil
             retv 
@@ -273,7 +273,7 @@ case class XmlReader(
       XmlFileLocator(l.getCharacterOffset, l.getColumnNumber, l.getLineNumber, l.getPublicId, l.getSystemId)
     }
     // Peek at the next few XmlEvents - if it is a string of text events followed by an end event then compress
-    // the sequence by extracting the combined "value" of the text events and throw away the individual
+    // the sequence by extracting the combined "optValue" of the text events and throw away the individual
     // text events
     @tailrec
     private def peekParseElementValue(peekQueue : List[XmlEvent] = Nil) : (Option[String], List[XmlEvent]) = {

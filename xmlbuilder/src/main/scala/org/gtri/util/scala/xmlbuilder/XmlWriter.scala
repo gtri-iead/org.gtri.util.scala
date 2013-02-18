@@ -132,12 +132,12 @@ case class XmlWriter(
               val nsURI = qName.getNamespaceURI.toString
               val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
               val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
-              ~s"writer.writeAttribute(prefix=$prefix, nsURI=$nsURI, localName=$localName, value=$value)"
+              ~s"writer.writeAttribute(prefix=$prefix, nsURI=$nsURI, localName=$localName, optValue=$value)"
               writer.writeAttribute(prefix, nsURI, localName, value)
             }
 
-            ~"Write value (if any)"
-            val value = e.element.value
+            ~"Write optValue (if any)"
+            val value = e.element.optValue
             if(value.isDefined) {
               val v = value.get
               ~s"writer.writeCharacters($v)"
@@ -220,19 +220,19 @@ case class XmlWriter(
 //            }
 //
 //            ~"Write attributes"
-//            for((qName,value) <- e.element.orderedAttributes) {
+//            for((qName,optValue) <- e.element.orderedAttributes) {
 //              val localName = qName.getLocalName.toString
 //              val nsURI = qName.getNamespaceURI.toString
 //              val optionPrefix = Option(qName.resolvePrefix(getNamespaceURIToPrefixResolver(newStack))).map { _.toString }
 //              val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
-//              ~s"writer.writeAttribute(prefix=$prefix, nsURI=$nsURI, localName=$localName, value=$value)"
-//              writer.writeAttribute(prefix, nsURI, localName, value)
+//              ~s"writer.writeAttribute(prefix=$prefix, nsURI=$nsURI, localName=$localName, optValue=$optValue)"
+//              writer.writeAttribute(prefix, nsURI, localName, optValue)
 //            }
 //
-//            ~"Write value (if any)"
-//            val value = e.element.value
-//            if(value.isDefined) {
-//              val v = value.get
+//            ~"Write optValue (if any)"
+//            val optValue = e.element.optValue
+//            if(optValue.isDefined) {
+//              val v = optValue.get
 //              ~s"writer.writeCharacters($v)"
 //              writer.writeCharacters(v)
 //            }

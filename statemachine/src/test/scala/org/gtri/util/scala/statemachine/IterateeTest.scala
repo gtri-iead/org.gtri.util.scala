@@ -87,8 +87,6 @@ class IterateeTest extends FunSpec {
         metadataFromContinuation + metadataFromEOI
       }
       val totalMetadataCount = iMetadataCount
-      println("result.metadata.length="+result.metadata.length)
-      println("totalMetadataCount="+totalMetadataCount)
       assert(result.metadata.length == totalMetadataCount)
     }
     it("should be able to peek at a value using Iteratee.peek") {
@@ -105,7 +103,7 @@ class IterateeTest extends FunSpec {
       assert(optSum.isDefined && optSum.get == sum)
     }
 
-    it("should be implicitly constructable from a function that takes Input and returns a done State") {
+    it("should be implicitly constructable from a function that takes Input and returns a Transition") {
       import Iteratee._
       def testSumF(n : Int, sum : Int) : Input[Int] => Transition[Int,Int] = {
         case Chunk(xs) =>

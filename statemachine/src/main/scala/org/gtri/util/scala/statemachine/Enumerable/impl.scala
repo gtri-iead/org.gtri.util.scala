@@ -61,7 +61,7 @@ object impl {
 
   private[impl] def runEnumerableTransition[O,A](r0 : Transition[O,A], _haltedRecoveryStrategy: HaltedRecoveryStrategy[Unit,O,A]) : (Transition[O,A], HaltedRecoveryStrategy[Unit,O,A]) = {
     var done = false
-    var r = utility.TransitionAccumulator(r0)
+    val r = utility.TransitionAccumulator(r0)
     var haltedRecoveryStrategy = _haltedRecoveryStrategy
     do {
       r.state.fold(
@@ -73,7 +73,7 @@ object impl {
           done = true
         },
         ifHalted = { q =>
-          val (newHaltedRecoveryStrategy, recoveredTransition) = haltedRecoveryStrategy.recoverAll(q)
+          val (recoveredTransition,newHaltedRecoveryStrategy) = haltedRecoveryStrategy.recoverAll(q)
           haltedRecoveryStrategy = newHaltedRecoveryStrategy
           r.accumulate(recoveredTransition)
           if(r.state.isContinuation == false) {

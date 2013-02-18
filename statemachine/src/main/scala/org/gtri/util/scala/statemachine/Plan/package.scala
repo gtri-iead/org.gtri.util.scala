@@ -71,18 +71,18 @@ package object Plan {
       cause       :   Option[Throwable]            = None,
       recover     :   () => Transition[A],
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,Unit,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), metadata=metadata)
+    ) = StateMachine.Halt.warn[Unit,Unit,A](message=message, cause=cause, recover=recover, metadata=metadata)
     def error[A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       recover     :   () => Transition[A],
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,Unit,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), metadata=metadata)
+    ) = StateMachine.Halt.error[Unit,Unit,A](message=message, cause=cause, recover=recover, metadata=metadata)
     def fatal[A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,Unit,A](issues=Seq(Issue.fatal(message,cause)), metadata=metadata)
+    ) = StateMachine.Halt.fatal[Unit,Unit,A](message=message, cause=cause, metadata=metadata)
   }
 
     /*

@@ -21,7 +21,6 @@
 */
 package org.gtri.util.scala.statemachine
 
-import IssueSeverityCode._
 import scala.collection.immutable.Seq
 
 package object Translator {
@@ -79,7 +78,7 @@ package object Translator {
       output      :   Seq[O]                       = Seq.empty,
       overflow    :   Seq[I]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[I,O,Unit](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+    ) = StateMachine.Halt.warn[I,O,Unit](message=message, cause=cause, recover=recover, output=output, overflow=overflow, metadata=metadata)
     def error[I,O](
       message     :   String,
       cause       :   Option[Throwable]            = None,
@@ -87,14 +86,14 @@ package object Translator {
       output      :   Seq[O]                       = Seq.empty,
       overflow    :   Seq[I]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[I,O,Unit](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+    ) = StateMachine.Halt.error[I,O,Unit](message=message, cause=cause, recover=recover, output=output, overflow=overflow, metadata=metadata)
     def fatal[I,O](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       output      :   Seq[O]                       = Seq.empty,
       overflow    :   Seq[I]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[I,O,Unit](issues=Seq(Issue.fatal(message,cause)), output=output, overflow=overflow, metadata=metadata)
+    ) = StateMachine.Halt.fatal[I,O,Unit](message=message, cause=cause, overflow=overflow, metadata=metadata)
   }
 
     /*

@@ -6,24 +6,24 @@ import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
 import org.gtri.util.scala.xmlbuilder.XmlElement
 
-case class XsdDocumentation(
-    source    :   Option[XsdAnyURI]             = None,
-    xml_lang  :   Option[XsdToken]              = None,
-    value     :   Option[String]                = None,
+final case class XsdDocumentation(
+    optSource    :   Option[XsdAnyURI]             = None,
+    optXmlLang   :   Option[XsdToken]              = None,
+    optValue     :   Option[String]                = None,
     optMetadata  :   Option[XsdElement.Metadata]   = None
   ) extends XsdElement {
 
   def qName = XsdDocumentation.util.qName
 
   def toAttributes = {
-    source.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList :::
-    xml_lang.map({ xml_lang => (XsdConstants.ATTRIBUTES.XML_LANG.QNAME,xml_lang.toString)}).toList
+    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList :::
+    optXmlLang.map({ xmlLang => (XsdConstants.ATTRIBUTES.XML_LANG.QNAME,xmlLang.toString)}).toList
   }
 
 //  def pushTo(contract: XsdContract) {
 //    contract.addXsdDocumentation(
-//      /* XsdAnyURI _source => */source.orNull,
-//      /* XsdToken _xml_lang => */xml_lang.orNull,
+//      /* XsdAnyURI _source => */optSource.orNull,
+//      /* XsdToken _xml_lang => */optXmlLang.orNull,
 //      /* String _value => */value.orNull,
 //      /* ImmutableMap<XsdNCName, XsdAnyURI> _prefixToNamespaceURIMap  => */prefixToNamespaceURIMap
 //    )
@@ -38,13 +38,13 @@ object XsdDocumentation {
     def parser[EE >: XsdDocumentation] : Iteratee[XmlElement,EE] = {
       for {
         element <- QNamePeekParser(qName)
-        source <- OptionalAttributePeekParser(ATTRIBUTES.SOURCE.QNAME, XsdAnyURI.parseString)
-        xml_lang <- OptionalAttributePeekParser(ATTRIBUTES.XML_LANG.QNAME, XsdToken.parseString)
+        optSource <- OptionalAttributePeekParser(ATTRIBUTES.SOURCE.QNAME, XsdAnyURI.parseString)
+        optXmlLang <- OptionalAttributePeekParser(ATTRIBUTES.XML_LANG.QNAME, XsdToken.parseString)
       } yield
           XsdDocumentation(
-            source = source,
-            xml_lang = xml_lang,
-            value = element.value,
+            optSource = optSource,
+            optXmlLang = optXmlLang,
+            optValue = element.optValue,
             optMetadata = Some(XsdElement.Metadata(element))
           )
     }

@@ -6,63 +6,65 @@ import org.gtri.util.xsddatatypes.XsdCodes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
 import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xsdbuilder.XsdAllOrNone
 
 case class XsdSchema(
-  id                      :   Option[XsdId]                                         = None,
-  targetNamespace         :   XsdAnyURI,
-  version                 :   XsdToken,
-  attributeFormDefault    :   Option[FormChoiceCode]                                = None,
-  elementFormDefault      :   Option[FormChoiceCode]                                = None,
-  blockDefaultCodes       :   Option[Either[AllOrNoneCode, Set[BlockDefaultCode]]]  = None,
-  finalDefaultCodes       :   Option[Either[AllOrNoneCode, Set[FinalDefaultCode]]]  = None,
-  xml_lang                :   Option[XsdToken]                                      = None,
-  optMetadata                :   Option[XsdElement.Metadata]                           = None
+  optId                     :   Option[XsdId]                         = None,
+  targetNamespace           :   XsdAnyURI,
+  version                   :   XsdToken,
+  optAttributeFormDefault   :   Option[FormChoiceCode]                = None,
+  optElementFormDefault     :   Option[FormChoiceCode]                = None,
+  optBlockDefaultCodes      :   Option[XsdAllOrNone[BlockDefaultCode]]   = None,
+  optFinalDefaultCodes      :   Option[XsdAllOrNone[FinalDefaultCode]]   = None,
+  optXmlLang                :   Option[XsdToken]                      = None,
+  optMetadata               :   Option[XsdElement.Metadata]           = None
 ) extends XsdElement {
 
-  def   qName   =   XsdSchema.util.qName
-  def   value   =   None
+  def   qName      =   XsdSchema.util.qName
+  def   optValue   =   None
 
-  def toAttributes = {
-    id.map({ id => ATTRIBUTES.ID.QNAME -> id.toString}).toList :::
-    List(ATTRIBUTES.VERSION.QNAME -> version.toString) :::
-    List(ATTRIBUTES.TARGETNAMESPACE.QNAME -> targetNamespace.toString) :::
-    attributeFormDefault.map({ attributeFormDefault => ATTRIBUTES.ATTRIBUTEFORMDEFAULT.QNAME -> attributeFormDefault.toString}).toList :::
-    elementFormDefault.map({ elementFormDefault => ATTRIBUTES.ELEMENTFORMDEFAULT.QNAME -> elementFormDefault.toString}).toList :::
-    blockDefaultCodes.map({ blockDefaultCodes => ATTRIBUTES.BLOCKDEFAULT.QNAME -> blockDefaultCodes.fold({ _.toString },{ _.mkString(" ") })}).toList :::
-    finalDefaultCodes.map({ finalDefaultCodes => ATTRIBUTES.FINALDEFAULT.QNAME -> finalDefaultCodes.fold({ _.toString },{ _.mkString(" ") })}).toList :::
-    xml_lang.map({ xml_lang => ATTRIBUTES.XML_LANG.QNAME -> xml_lang.toString}).toList
-  }
-
-//  def pushTo(contract: XsdContract) {
-//    val blockDefaultAllOrNoneCode : AllOrNoneCode = blockDefaultCodes.orNull.left.toOption.orNull
-//    val blockDefaultCodesSet : Set[BlockDefaultCode] = {
-//      val temp : Either[AllOrNoneCode, Set[BlockDefaultCode]] = blockDefaultCodes.getOrElse(Right(Set.empty[BlockDefaultCode]))
-//      temp.right.getOrElse(Set.empty[BlockDefaultCode])
-//    }
-//    val finalDefaultAllOrNoneCode : AllOrNoneCode = finalDefaultCodes.orNull.left.toOption.orNull
-//    val finalDefaultCodesSet : Set[FinalDefaultCode] = {
-//      val temp : Either[AllOrNoneCode, Set[FinalDefaultCode]] = finalDefaultCodes.getOrElse(Right(Set.empty[FinalDefaultCode]))
-//      temp.right.getOrElse(Set.empty[FinalDefaultCode])
-//    }
-//    contract.addXsdSchema(
-//      /* XsdId _id => */id.orNull,
-//      /* XsdAnyURI _targetNamespace  => */targetNamespace,
-//      /* XsdToken _version  => */version,
-//      /* XsdContract.FormChoiceCode _attributeFormDefault  => */attributeFormDefault.orNull,
-//      /* XsdContract.FormChoiceCode _elementFormDefault  => */elementFormDefault.orNull,
-//      /* ImmutableSet<XsdContract.BlockDefaultCode> _blockDefaultCodes  => */blockDefaultCodesSet,
-//      /* XsdContract.AllOrNoneCode _blockDefaultAllOrNoneCode  => */blockDefaultAllOrNoneCode,
-//      /* ImmutableSet<XsdContract.FinalDefaultCode> _finalDefaultCodes  => */finalDefaultCodesSet,
-//      /* XsdContract.AllOrNoneCode _finalDefaultAllOrNoneCode  => */finalDefaultAllOrNoneCode,
-//      /* XsdToken _xml_lang  => */xml_lang.orNull,
-//      /* ImmutableMap<XsdNCName, XsdAnyURI> _prefixToNamespaceURIMap  => */prefixToNamespaceURIMap
-//    )
+//  def toAttributes = {
+//    optId.map({ id => ATTRIBUTES.ID.QNAME -> id.toString}).toList :::
+//    List(ATTRIBUTES.VERSION.QNAME -> version.toString) :::
+//    List(ATTRIBUTES.TARGETNAMESPACE.QNAME -> targetNamespace.toString) :::
+//    optAttributeFormDefault.map({ attributeFormDefault => ATTRIBUTES.ATTRIBUTEFORMDEFAULT.QNAME -> attributeFormDefault.toString}).toList :::
+//    optElementFormDefault.map({ elementFormDefault => ATTRIBUTES.ELEMENTFORMDEFAULT.QNAME -> elementFormDefault.toString}).toList :::
+//    optBlockDefaultCodes.map({ blockDefaultCodes => ATTRIBUTES.BLOCKDEFAULT.QNAME -> blockDefaultCodes.fold({ _.toString },{ _.mkString(" ") })}).toList :::
+//    optFinalDefaultCodes.map({ finalDefaultCodes => ATTRIBUTES.FINALDEFAULT.QNAME -> finalDefaultCodes.fold({ _.toString },{ _.mkString(" ") })}).toList :::
+//    optXmlLang.map({ xml_lang => ATTRIBUTES.XML_LANG.QNAME -> xml_lang.toString}).toList
 //  }
+  def util = XsdSchema.util
+
+  def getAttributeValue(qName: XsdQName) = {
+    qName.getLocalName.getValue match {
+      case ATTRIBUTES.ID.LOCALNAME.getValue => optId
+      case ATTRIBUTES.TARGETNAMESPACE.LOCALNAME.getValue => Some(targetNamespace.toString)
+      case ATTRIBUTES.VERSION.LOCALNAME.getValue => Some(version.toString)
+      case ATTRIBUTES.ATTRIBUTEFORMDEFAULT.LOCALNAME.getValue => optAttributeFormDefault
+      case ATTRIBUTES.ELEMENTFORMDEFAULT.LOCALNAME.getValue => optElementFormDefault
+      case ATTRIBUTES.BLOCKDEFAULT.LOCALNAME.getValue => optBlockDefaultCodes
+      case ATTRIBUTES.FINALDEFAULT.LOCALNAME.getValue => optFinalDefaultCodes
+      case ATTRIBUTES.XML_LANG.LOCALNAME.getValue => optXmlLang
+    }
+  }
 }
 
 object XsdSchema {
 
   implicit object util extends XsdElementUtil[XsdSchema] {
+    def apply(qNameToAnyMap : Map[XsdQName,Any]) : XsdSchema = {
+      XsdSchema(
+        optId = qNameToAnyMap.mapValues({ _.asInstanceOf[XsdId]}).get(ATTRIBUTES.ID.QNAME),
+        targetNamespace = qNameToAnyMap.mapValues({ _.asInstanceOf[XsdAnyURI]}).apply(ATTRIBUTES.ID.QNAME),
+        version = qNameToAnyMap.mapValues({ _.asInstanceOf[XsdToken]}).apply(ATTRIBUTES.ID.QNAME),
+        optAttributeFormDefault = qNameToAnyMap.mapValues({ _.asInstanceOf[FormChoiceCode]}).get(ATTRIBUTES.ID.QNAME),
+        optElementFormDefault = qNameToAnyMap.mapValues({ _.asInstanceOf[FormChoiceCode]}).get(ATTRIBUTES.ID.QNAME),
+        optBlockDefaultCodes = qNameToAnyMap.mapValues({ _.asInstanceOf[XsdAllOrNone[BlockDefaultCode]]}).get(ATTRIBUTES.ID.QNAME),
+        optFinalDefaultCodes = qNameToAnyMap.mapValues({ _.asInstanceOf[XsdAllOrNone[FinalDefaultCode]]}).get(ATTRIBUTES.ID.QNAME),
+        optXmlLang = qNameToAnyMap.mapValues({ _.asInstanceOf[XsdToken]}).get(ATTRIBUTES.ID.QNAME),
+        optMetadata = Some(XsdElement.Metadata(element))
+      )
+    }
     def qName = ELEMENTS.SCHEMA.QNAME
 
     def randomString = java.lang.Long.toHexString(java.lang.Double.doubleToLongBits(java.lang.Math.random()))
@@ -71,24 +73,24 @@ object XsdSchema {
     def parser[EE >: XsdSchema] : Iteratee[XmlElement,EE] = {
       for{
         element <- QNamePeekParser(qName)
-        id <- OptionalAttributePeekParser(ATTRIBUTES.ID.QNAME, XsdId.parseString)
-        targetNamespace <- RequiredAttributePeekParser(ATTRIBUTES.TARGETNAMESPACE.QNAME,XsdAnyURI.parseString, genRandomURN _)
-        version <- RequiredAttributePeekParser(ATTRIBUTES.VERSION.QNAME, XsdToken.parseString, () => new XsdToken("1"))
-        attributeFormDefault <- OptionalAttributePeekParser(ATTRIBUTES.ATTRIBUTEFORMDEFAULT.QNAME, FormChoiceCode.parseString)
-        elementFormDefault <- OptionalAttributePeekParser(ATTRIBUTES.ELEMENTFORMDEFAULT.QNAME, FormChoiceCode.parseString)
-        blockDefaultCodes <- OptionalAttributePeekParser(ATTRIBUTES.BLOCKDEFAULT.QNAME, parseAllOrNone(BlockDefaultCode.parseString))
-        finalDefaultCodes <- OptionalAttributePeekParser(ATTRIBUTES.FINALDEFAULT.QNAME, parseAllOrNone(FinalDefaultCode.parseString))
-        xml_lang <- OptionalAttributePeekParser(ATTRIBUTES.XML_LANG.QNAME, XsdToken.parseString)
+        optId <- OptionalAttributePeekParser(ATTRIBUTES.ID.QNAME, XsdId.parseString)
+        targetNamespace <- RequiredAttributePeekParser(ATTRIBUTES.TARGETNAMESPACE.QNAME,XsdAnyURI.parseString, Some(genRandomURN _))
+        version <- RequiredAttributePeekParser(ATTRIBUTES.VERSION.QNAME, XsdToken.parseString, Some(() => new XsdToken("1")))
+        optAttributeFormDefault <- OptionalAttributePeekParser(ATTRIBUTES.ATTRIBUTEFORMDEFAULT.QNAME, FormChoiceCode.parseString)
+        optElementFormDefault <- OptionalAttributePeekParser(ATTRIBUTES.ELEMENTFORMDEFAULT.QNAME, FormChoiceCode.parseString)
+        optBlockDefaultCodes <- OptionalAttributePeekParser(ATTRIBUTES.BLOCKDEFAULT.QNAME, parseAllOrNone(BlockDefaultCode.parseString))
+        optFinalDefaultCodes <- OptionalAttributePeekParser(ATTRIBUTES.FINALDEFAULT.QNAME, parseAllOrNone(FinalDefaultCode.parseString))
+        optXmlLang <- OptionalAttributePeekParser(ATTRIBUTES.XML_LANG.QNAME, XsdToken.parseString)
       } yield
             XsdSchema(
-              id = id,
+              optId = optId,
               targetNamespace = targetNamespace,
               version = version,
-              attributeFormDefault = attributeFormDefault,
-              elementFormDefault = elementFormDefault,
-              blockDefaultCodes = blockDefaultCodes,
-              finalDefaultCodes = finalDefaultCodes,
-              xml_lang = xml_lang,
+              optAttributeFormDefault = optAttributeFormDefault,
+              optElementFormDefault = optElementFormDefault,
+              optBlockDefaultCodes = optBlockDefaultCodes,
+              optFinalDefaultCodes = optFinalDefaultCodes,
+              optXmlLang = optXmlLang,
               optMetadata = Some(XsdElement.Metadata(element))
             )
     }

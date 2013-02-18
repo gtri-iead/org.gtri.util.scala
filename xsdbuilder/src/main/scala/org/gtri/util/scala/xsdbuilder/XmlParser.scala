@@ -25,17 +25,24 @@ object XmlParser {
     def s0 = Cont()
   }
 
-  case class RequiredAttributePeekParser[U](qName : XsdQName, parser: String => U, validValue: () => U) extends Iteratee[XmlElement,U] {
+  case class RequiredAttributePeekParser[U](qName : XsdQName, parser: String => U, optValidValue: Option[() => U] = None) extends Iteratee[XmlElement,U] {
     import Iteratee._
 
     case class Cont() extends State.Continuation[XmlElement,U] {
 
-      def recoverF : () => Transition[XmlElement,U] = () => {
-        val value = validValue()
-        Succeed(
-          value = value,
-          metadata = Issue.warn("Set required attribute to a valid value " + qName.toString + "='" + value.toString + "'") :: Nil
-        )
+      def halt(message : String, cause : Option[Throwable]) : Transition[XmlElement,U] = {
+        optValidValue map { validValue =>
+          val recoverF = () => {
+            val value = validValue()
+            Succeed(
+              value = value,
+              metadata = Issue.warn("Set required attribute to a valid value " + qName.toString + "='" + value.toString + "'") :: Nil
+            )
+          }
+          Halt.error(message,cause,recoverF)
+        } getOrElse {
+          Halt.fatal(message,cause)
+        }
       }
 
       def apply(element : XmlElement) = {
@@ -50,19 +57,11 @@ object XmlParser {
             )
           } catch {
             case e : Exception =>
-              Halt.error(
-                message = e.getMessage,
-                cause = Some(e),
-                recover = recoverF
-              )
+            halt(e.getMessage,Some(e))
           }
         } else {
           // Attribute is not set
-          Halt.error(
-            message = "Missing required attribute " + qName,
-            cause = None,
-            recover = recoverF
-          )
+          halt("Missing required attribute " + qName, None)
         }
 
       }

@@ -70,7 +70,7 @@ object StateMachine {
       overflow    :   Seq[I]                            = Seq.empty,
       metadata    :   Seq[Any]                          = Seq.empty
     ) = Transition[I,O,A](
-      state     =   State.Halted(
+        state     =   State.Halted(
         issues        =   issues,
         optRecover    =   optRecover
       ),
@@ -78,6 +78,29 @@ object StateMachine {
       overflow  =   overflow,
       metadata  =   metadata
     )
+    def warn[I,O,A](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      recover     :   () => Transition[I,O,A],
+      output      :   Seq[O]                       = Seq.empty,
+      overflow    :   Seq[I]                       = Seq.empty,
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = apply[I,O,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+    def error[I,O,A](
+      message     :   String,
+      cause       :   Option[Throwable]            = None,
+      recover     :   () => Transition[I,O,A],
+      output      :   Seq[O]                       = Seq.empty,
+      overflow    :   Seq[I]                       = Seq.empty,
+      metadata    :   Seq[Any]                     = Seq.empty
+    ) = apply[I,O,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+    def fatal[I,O,A](
+      message     :   String,
+      cause       :   Option[Throwable]           = None,
+      output      :   Seq[O]                      = Seq.empty,
+      overflow    :   Seq[I]                      = Seq.empty,
+      metadata    :   Seq[Any]                    = Seq.empty
+    ) = apply[I,O,A](issues=Seq(Issue.fatal(message,cause)), output=output, overflow=overflow, metadata=metadata)
   }
 
   sealed trait State[I,O,A] {
@@ -101,7 +124,7 @@ object StateMachine {
 
     trait Continuation[I,O,A] extends State[I,O,A] {
 
-      def apply( i   : Input[I]   ) : Transition[I,O,A] = utility.applyInputToState(i,this)
+//      def apply( i   : Input[I]   ) : Transition[I,O,A] = utility.applyInputToState(i,this)
       def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applySeqToState(xs,this)
       def apply( x   : I          ) : Transition[I,O,A]
       def apply( x   : EndOfInput ) : Transition[I,O,A]
@@ -144,6 +167,24 @@ object StateMachine {
       ) = ifHalted(this)
 
       lazy val severityCode = issues.maxBy({ _.severityCode }).severityCode
+    }
+
+    object Halted {
+      def warn[I,O,A](
+        message     :   String,
+        cause       :   Option[Throwable]            = None,
+        recover     :   () => Transition[I,O,A]
+      ) = apply[I,O,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover))
+      def error[I,O,A](
+        message     :   String,
+        cause       :   Option[Throwable]            = None,
+        recover     :   () => Transition[I,O,A]
+      ) = apply[I,O,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover))
+      def fatal[I,O,A](
+        message     :   String,
+        cause       :   Option[Throwable]            = None,
+        metadata    :   Seq[Any]                     = Seq.empty
+      ) = apply[I,O,A](issues=Seq(Issue.fatal(message,cause)))
     }
   }
 

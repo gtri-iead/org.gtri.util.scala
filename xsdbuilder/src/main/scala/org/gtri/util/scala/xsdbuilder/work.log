@@ -1,0 +1,9 @@
+Feb 11
+Goals:
+#1: Add working tests
+#2: XsdElementUtil.parser function should be converted to PartialParser that takes an element stack for parsing qNames
+#3: Convert XsdElementUtil.parser functions to generically parse N attributes
+#3a: How to connect to attribute values?
+#3aa: Best that could be generically parsed would be a Map[XsdQName,Any] but would still require "parsing" by constructor to assign to specific fields
+#3ab: Also doesn't allow per type recovery defaults - a name
+#4: Convert XsdElement.toAttribute to generically build attribute list

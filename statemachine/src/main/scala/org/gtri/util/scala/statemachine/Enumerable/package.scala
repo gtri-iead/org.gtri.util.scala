@@ -75,20 +75,20 @@ package object Enumerable {
       recover     :   () => Transition[O,A],
       output      :   Seq[O]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,O,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, metadata=metadata)
+    ) = StateMachine.Halt.warn[Unit,O,A](message=message, cause=cause, recover=recover, output=output, metadata=metadata)
     def error[O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       recover     :   () => Transition[O,A],
       output      :   Seq[O]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,O,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, metadata=metadata)
+    ) = StateMachine.Halt.error[Unit,O,A](message=message, cause=cause, recover=recover, output=output, metadata=metadata)
     def fatal[O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       output      :   Seq[O]                       = Seq.empty,
       metadata    :   Seq[Any]                     = Seq.empty
-    ) = StateMachine.Halt[Unit,O,A](issues=Seq(Issue.fatal(message,cause)), output=output, metadata=metadata)
+    ) = StateMachine.Halt.fatal[Unit,O,A](message=message, cause=cause, output=output, metadata=metadata)
   }
 
   /*
