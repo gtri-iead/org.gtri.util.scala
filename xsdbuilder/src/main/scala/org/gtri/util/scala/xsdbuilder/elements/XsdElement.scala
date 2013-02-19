@@ -26,16 +26,13 @@ trait XsdElement {
     } yield (key,value)
   }
 
-  def toXmlElement = {
-
-    XmlElement(
+  def toXmlElement = XmlElement(
       qName                     =   qName,
       optValue                  =   optValue,
       attributesMap             =   (toAttributes map { tuple => (tuple._1,tuple._2.toString) }).toMap,
       prefixToNamespaceURIMap   =   prefixToNamespaceURIMap,
       optMetadata               =   optMetadata map { _.toXmlElementMetadata }
     )
-  }
 
   def getAttributeValue(qName : XsdQName) : Option[Any]
 }

@@ -128,16 +128,16 @@ package object statemachine {
 //  }
 
   implicit class implicitEnumerableTransitionOps[O,A](val self: Enumerable.Transition[O,A]) extends AnyVal {
-    def flatMap[OO,B](f: A => Enumerable.Transition[OO,B]) : Enumerable.Transition[OO,B] = Enumerable.impl.flatMapEnumerableTransition(self,f)
-    def map[OO,B](f: A => B) : Enumerable.Transition[OO,B] = Enumerable.impl.mapEnumerableTransition(self,f)
+    def flatMap[II,OO,BB](f: A => StateMachine.Transition[II,OO,BB]) : StateMachine.Transition[II,OO,BB] = Enumerable.impl.flatMapEnumerableTransition(self,f)
+    def map[II,OO,BB](f: A => BB) : StateMachine.Transition[II,OO,BB] = Enumerable.impl.mapEnumerableTransition(self,f)
 
 //    def toOutput[II,AA](ifSuccess : => StateMachine.State[II,A,AA]) : StateMachine.Transition[II,A,AA] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, ifSuccess)
-    def toIteratee[I] : Iteratee.Transition[I,A] = Enumerable.impl.convertEnumerableTransitionToTransitionValue(self)
+//    def toIteratee[I] : Iteratee.Transition[I,A] = Enumerable.impl.mapEnumerableToIterateeValue(self)
   }
 
-  implicit class implicitEnumerableTransitionSeqOps[O,A](val self: Enumerable.Transition[O,Seq[A]]) extends AnyVal {
-    def toTranslator[I] : Translator.Transition[I,A] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, Translator.State.Success())
-  }
+//  implicit class implicitEnumerableTransitionSeqOps[O,A](val self: Enumerable.Transition[O,Seq[A]]) extends AnyVal {
+//    def toTranslator[I] : Translator.Transition[I,A] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, Translator.State.Success())
+//  }
 
   implicit class implicitSeqEnumerableTransitionOps[O,A](val self: Traversable[Enumerable.Transition[O,A]]) extends AnyVal {
     def invert : Enumerable.Transition[O,Seq[A]] = Enumerable.impl.invertEnumerableTransitionTraversable(self)

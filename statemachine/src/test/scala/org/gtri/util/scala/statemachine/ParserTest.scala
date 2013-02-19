@@ -74,7 +74,7 @@ class ParserTest extends FunSpec {
       val t : Seq[Parser.Transition[Int]] =  v map { s => parser1(s) }
       val t0 : Parser.Transition[Seq[Int]] = t.invert
       assert(t0.state.isHalted && t0.state.isRecoverable)
-      val t1 : Translator.Transition[Float,Int] = t0.toTranslator
+      val t1 : Translator.Transition[Float,Int] = t0.flatMap { xs => Translator.Succeed[Float,Int](xs) }
       assert(t1.state.isHalted && t1.state.isRecoverable)
       val t2 : Translator.Transition[Float,Int] = t1.state.asInstanceOf[Translator.State.Halted[Float,Int]].optRecover.get()
       assert(t2 == Translator.Succeed(List(1,2,100,3,4)))

@@ -21,11 +21,10 @@ package object Parser {
     val Halted = StateMachine.State.Halted
   }
   object Succeed {
-    def apply[I,A](
+    def apply[A](
       value : A,
-      overflow    :   Seq[I]                      = Seq.empty,
       metadata    :   Seq[Any]                    = Seq.empty
-    ) = StateMachine.Succeed[I,Unit,A](value=value, overflow=overflow, metadata=metadata)
+    ) = StateMachine.Succeed[Unit,Unit,A](value=value, metadata=metadata)
   }
 
   object Halt {

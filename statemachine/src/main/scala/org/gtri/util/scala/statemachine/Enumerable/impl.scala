@@ -133,81 +133,77 @@ object impl {
   def runEnumerable[O,A](m: Enumerable[O,A], haltedRecoveryStrategy: HaltedRecoveryStrategy[Unit,O,A]) : (Transition[O,A],HaltedRecoveryStrategy[Unit,O,A]) = runEnumerableState(m.s0, haltedRecoveryStrategy)
 
 
-  /**
-   * Extract the value of an Enumerable transition (or Halted state) and make this value the output of a different type of StateMachine (such as a Translator or Enumerator)
-   * @param t
-   * @param ifSuccess
-   * @tparam O
-   * @tparam A
-   * @tparam II
-   * @tparam AA
-   * @return
-   */
-  def convertEnumerableTransitionToTransitionOutput[O,A,II,AA](t: Transition[O,Seq[A]], ifSuccess : => StateMachine.State[II,A,AA]) : StateMachine.Transition[II,A,AA] = {
-    t.state.fold(
-      ifContinuation = { q =>
-        // Run the enumerable to extract the value or get a halted state
-        val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,Seq[A]])
-        // Run enumerable only returns Success/Halted but because it returns Transition this isn't captured by type system - so there can't be infinite recursion here
-        convertEnumerableTransitionToTransitionOutput(t0, ifSuccess)
-      },
-      ifSuccess = { q =>
-        StateMachine.Transition(
-          state = ifSuccess,
-          output = q.value,
-          metadata = t.metadata
-        )
-      },
-      ifHalted = { q =>
-        val optRecover : Option[() => StateMachine.Transition[II,A,AA]] = q.optRecover map { recover => () =>
-          convertEnumerableTransitionToTransitionOutput(recover(),ifSuccess)
-        }
-        StateMachine.Halt(
-          issues = q.issues,
-          optRecover = optRecover,
-          metadata = t.metadata
-        )
-      }
-    )
-  }
+//  /**
+//   * Extract the value of an Enumerable transition (or Halted state) and make this value the output of a Translator
+//   * @param t
+//   * @param ifSuccess
+//   * @tparam O
+//   * @tparam A
+//   * @tparam II
+//   * @return
+//   */
+//  def mapEnumerableTransitionToTranslator[O,A,II,OO](t: Transition[O,A], ifSuccess: A => Translator.Transition[II,OO]) : Translator.Transition[II,OO] = {
+//    t.state.fold(
+//      ifContinuation = { q =>
+//        // Run the enumerable to extract the value or get a halted state
+//        val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,A])
+//        // Run enumerable only returns Success/Halted but because it returns Transition this isn't captured by type system - so there can't be infinite recursion here
+//        mapEnumerableTransitionToTranslator(t0, ifSuccess)
+//      },
+//      ifSuccess = { q =>
+//        val t0 = ifSuccess(q.value)
+//        t0.copy(metadata = t0.metadata ++ t.metadata)
+//      },
+//      ifHalted = { q =>
+//        val optRecover : Option[() => Translator.Transition[II,OO]] = q.optRecover map { recover => () =>
+//          mapEnumerableTransitionToTranslator(recover(),ifSuccess)
+//        }
+//        Translator.Halt(
+//          issues = q.issues,
+//          optRecover = optRecover,
+//          metadata = t.metadata
+//        )
+//      }
+//    )
+//  }
 
 
-  /**
-   * Extract the value of an Enumerable transition (or Halted state) and make this value the value of a different type of StateMachine (such as an Iteratee)
-   * @param t
-   * @tparam O
-   * @tparam A
-   * @tparam II
-   * @tparam OO
-   * @tparam AA
-   * @return
-   */
-  def convertEnumerableTransitionToTransitionValue[O,A,II,OO,AA](t: Transition[O,A]) : StateMachine.Transition[II,OO,A] = {
-    t.state.fold(
-      ifContinuation = { q =>
-        // Run the enumerable to extract the value or get a halted state
-        val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,A])
-        // Run enumerable only returns Success/Halted but because it returns Transition this isn't captured by type system - so there can't be infinite recursion here
-        convertEnumerableTransitionToTransitionValue(t0)
-      },
-      ifSuccess = { q =>
-        StateMachine.Succeed(
-          value = q.value,
-          metadata = t.metadata
-        )
-      },
-      ifHalted = { q =>
-        val optRecover : Option[() => StateMachine.Transition[II,OO,A]] = q.optRecover map { recover => () =>
-          convertEnumerableTransitionToTransitionValue(recover())
-        }
-        StateMachine.Halt(
-          issues = q.issues,
-          optRecover = optRecover,
-          metadata = t.metadata
-        )
-      }
-    )
-  }
+//  /**
+//   * Extract the value of an Enumerable transition (or Halted state) and make this value the value of an Iteratee
+//   * @param t
+//   * @tparam O
+//   * @tparam A
+//   * @tparam II
+//   * @tparam OO
+//   * @tparam AA
+//   * @return
+//   */
+//  def mapEnumerableToIterateeValue[O,A,II,OO,AA](t: Transition[O,A], f: A => AA) : StateMachine.Transition[II,OO,AA] = {
+//    t.state.fold(
+//      ifContinuation = { q =>
+//        // Run the enumerable to extract the value or get a halted state
+//        val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,A])
+//        // Run enumerable only returns Success/Halted but because it returns Transition this isn't captured by type system - so there can't be infinite recursion here
+//        mapEnumerableToIterateeValue(t0,f)
+//      },
+//      ifSuccess = { q =>
+//        StateMachine.Succeed(
+//          value = f(q.value),
+//          metadata = t.metadata
+//        )
+//      },
+//      ifHalted = { q =>
+//        val optRecover : Option[() => StateMachine.Transition[II,OO,AA]] = q.optRecover map { recover => () =>
+//          mapEnumerableToIterateeValue(recover(),f)
+//        }
+//        StateMachine.Halt(
+//          issues = q.issues,
+//          optRecover = optRecover,
+//          metadata = t.metadata
+//        )
+//      }
+//    )
+//  }
 
   /**
    * Map an Enumerable Transition in terms of bind/flatMap
@@ -219,18 +215,9 @@ object impl {
    * @tparam B
    * @return
    */
-  def mapEnumerableTransition[O,A,OO,B](s : Transition[O,A], f: A => B) : Transition[OO,B] = {
-    flatMapEnumerableTransition[O,A,OO,B](s, { (a : A) => bindEnumerableTransition(f(a)) } )
+  def mapEnumerableTransition[O,A,II,OO,B](s : Transition[O,A], f: A => B) : StateMachine.Transition[II,OO,B] = {
+    flatMapEnumerableTransition[O,A,II,OO,B](s, { (a : A) => StateMachine.Succeed(f(a)) } )
   }
-
-  /**
-   * Bind a value to an Enumerable Transition (Success)
-   * @param value
-   * @tparam O
-   * @tparam A
-   * @return
-   */
-  def bindEnumerableTransition[O,A](value : A) : Transition[O,A] = Succeed(value)
 
   /**
    * Flat map an Enumerable Transition such that if the Transition is a continuation it is run until it is Success/Halt,
@@ -244,10 +231,10 @@ object impl {
    * @tparam B
    * @return
    */
-  def flatMapEnumerableTransition[O,A,OO,B](t : Transition[O,A], f: A => Transition[OO,B]) : Transition[OO,B] = {
+  def flatMapEnumerableTransition[O,A,II,OO,B](t : Transition[O,A], f: A => StateMachine.Transition[II,OO,B]) : StateMachine.Transition[II,OO,B] = {
     t.state.fold(
       ifContinuation = { q =>
-      // Run the enumerable to extract the value or get a halted state
+        // Run the enumerable to extract the value or get a halted state
         val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,A])
         // Run enumerable only returns Success/Halted but because it returns Transition this isn't captured by type system - so there can't be infinite recursion here
         flatMapEnumerableTransition(t0, f)
@@ -257,10 +244,10 @@ object impl {
         t1.copy(metadata = t1.metadata ++ t.metadata)
       },
       ifHalted = { q =>
-        val optRecover : Option[() => Transition[OO,B]] = q.optRecover map { recover => { () =>
+        val optRecover : Option[() => StateMachine.Transition[II,OO,B]] = q.optRecover map { recover => { () =>
           flatMapEnumerableTransition(recover(), f)
         }}
-        Halt(
+        StateMachine.Halt(
           issues = q.issues,
           optRecover = optRecover,
           metadata = t.metadata
@@ -282,7 +269,7 @@ object impl {
     if(xs.isEmpty) {
       Succeed(xt.reverse)
     } else {
-      flatMapEnumerableTransition[O,A,O,Seq[A]](xs.head, { x => invertEnumerableTransitionTraversable(xs.tail, x :: xt) })
+      flatMapEnumerableTransition[O,A,Unit,O,Seq[A]](xs.head, { x => invertEnumerableTransitionTraversable(xs.tail, x :: xt) })
     }
   }
 }
