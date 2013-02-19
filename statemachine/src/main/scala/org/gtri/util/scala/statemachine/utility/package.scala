@@ -130,16 +130,16 @@ package object utility {
   }
 
 
-//  @tailrec def applySeqToState[I,O,A](current: Result[I,O,A], input: Seq[I]) : Result[I,O,A] = {
+//  @tailrec def applySeqToState[I,O,A](t: Result[I,O,A], input: Seq[I]) : Result[I,O,A] = {
 //    // Note: can't use state.accumulateTransitions because of tailrec optimization
-//    current.state match {
+//    t.state match {
 //      case q : State.Continue[I,O,A] =>
 //        input match {
-//          case Nil => current
-//          case head :: tail => applySeqToState(accumulateTransitions(current,q(head)),tail)
+//          case Nil => t
+//          case head :: tail => applySeqToState(accumulateTransitions(t,q(head)),tail)
 //        }
-//      case q : State.Success[I,O,A] => current.copy(overflow = input ++ current.overflow)
-//      case q : State.Failure[I,O,A] => current.copy(overflow = input ++ current.overflow)
+//      case q : State.Success[I,O,A] => t.copy(overflow = input ++ t.overflow)
+//      case q : State.Failure[I,O,A] => t.copy(overflow = input ++ t.overflow)
 //    }
 //  }
 //
@@ -246,10 +246,10 @@ package object utility {
     val t1 = s1(t0.output)
     // TODO: t1 could have overflow, though with Success overflow could probably be ignored
     //TODO: t1 could be Halted -- what about overflow from it?
-    //If r0 Success force r1 done and composeTransition otherwise just composeTransition
+    //If t0 Success force r1 done and composeTransition otherwise just composeTransition
     t0.state.fold(
       ifSuccess = { q =>
-      // If r0 is Success, feed an EOI to t1 since t1 will not receive further input
+      // If t0 is Success, feed an EOI to t1 since t1 will not receive further input
         composeTransition(t0, forceDoneTransition(t1))
       },
       ifContinuation = { q => composeTransition(t0,t1) },
@@ -406,5 +406,7 @@ package object utility {
    */
   def composeStateMachines[A,B,C,D,ZZ](m0 : StateMachine[A,B,ZZ], m1 : StateMachine[B,C,D]) : StateMachine[A,C,D]
     = CompositeStateMachine(m0,m1)
+
+
 }
 

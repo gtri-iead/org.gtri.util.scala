@@ -127,12 +127,20 @@ package object statemachine {
 //    def map[II,OO,BB](f: A => BB) : StateMachine[II,OO,BB] = Plan.impl.mapPlan[A,II,OO,BB](self, f)
 //  }
 
-  implicit class implicitParserTransitionOps[A](val self: Parser.Transition[A]) extends AnyVal {
-    def flatMap[B](f: A => Parser.Transition[B]) : Parser.Transition[B] = Parser.impl.flatMapParserTransition(self,f)
-    def map[B](f: A => B) : Parser.Transition[B] = Parser.impl.mapParserTransition(self,f)
+  implicit class implicitEnumerableTransitionOps[O,A](val self: Enumerable.Transition[O,A]) extends AnyVal {
+    def flatMap[OO,B](f: A => Enumerable.Transition[OO,B]) : Enumerable.Transition[OO,B] = Enumerable.impl.flatMapEnumerableTransition(self,f)
+    def map[OO,B](f: A => B) : Enumerable.Transition[OO,B] = Enumerable.impl.mapEnumerableTransition(self,f)
 
-    def toTranslator[I](ifSuccess : => Translator.State[I,A]) : Translator.Transition[I,A] = Parser.impl.parserTransitionToTranslatorTransition(self, ifSuccess)
-    def toIteratee[I] : Iteratee.Transition[I,A] = Parser.impl.parserTransitionToIterateeTransition(self)
+//    def toOutput[II,AA](ifSuccess : => StateMachine.State[II,A,AA]) : StateMachine.Transition[II,A,AA] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, ifSuccess)
+    def toIteratee[I] : Iteratee.Transition[I,A] = Enumerable.impl.convertEnumerableTransitionToTransitionValue(self)
+  }
+
+  implicit class implicitEnumerableTransitionSeqOps[O,A](val self: Enumerable.Transition[O,Seq[A]]) extends AnyVal {
+    def toTranslator[I] : Translator.Transition[I,A] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, Translator.State.Success())
+  }
+
+  implicit class implicitSeqEnumerableTransitionOps[O,A](val self: Traversable[Enumerable.Transition[O,A]]) extends AnyVal {
+    def invert : Enumerable.Transition[O,Seq[A]] = Enumerable.impl.invertEnumerableTransitionTraversable(self)
   }
 
   implicit class implicitIterateeContinuationFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee.State.Continuation[I,A] {

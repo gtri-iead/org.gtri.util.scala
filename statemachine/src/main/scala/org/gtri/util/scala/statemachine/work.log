@@ -149,3 +149,10 @@ Feb 17
 #2: Where possible converted implicit classes to implicit value classes to eliminate unboxing
 #3: Should I convert Transition to a sealed trait base class and move parameters to their appropriate sub-types?
 #3aa: This is will result in a large rewrite of the code base
+#4: Generalized Parser impl flatpMap/map to Enumerable
+#5: Added Enumerable.Transition.toOutput and Enumerable.Transition.toValue for converting an Enumerable (Parser) Transition to another type of transition
+#6: Note that both Enumerable flatMap/map and toOutput/toValue cause the state to be run if it is in the continuation state. Since Parser is never in the continuation state, this has not been a problem so far.
+
+Feb 18
+
+#1: Need a way to flatMap/map a collection of Enumerable.Transitions: Seq[Enumerable.Transition[A]] -> Enumerable.Transition[Seq[A]]
