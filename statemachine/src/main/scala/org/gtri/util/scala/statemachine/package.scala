@@ -140,7 +140,12 @@ package object statemachine {
 //  }
 
   implicit class implicitSeqEnumerableTransitionOps[O,A](val self: Traversable[Enumerable.Transition[O,A]]) extends AnyVal {
-    def invert : Enumerable.Transition[O,Seq[A]] = Enumerable.impl.invertEnumerableTransitionTraversable(self)
+    def sequence : Enumerable.Transition[O,Seq[A]] = Enumerable.impl.sequenceEnumerableTransitionTraversable(self)
+  }
+
+  implicit class implicitParserOps[A,B](val self: Parser[A,B]) extends AnyVal {
+    def map[C](f: B => C) : Parser[A,C] = Parser.impl.mapParser(self, f)
+    def flatMap[C](f: B => Parser[A,C]) : Parser[A,C] = Parser.impl.flatMapParser(self,f)
   }
 
   implicit class implicitIterateeContinuationFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee.State.Continuation[I,A] {

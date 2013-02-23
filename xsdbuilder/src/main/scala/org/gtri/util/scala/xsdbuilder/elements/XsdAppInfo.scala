@@ -15,9 +15,16 @@ final case class XsdAppInfo(
 
   def optValue = None
 
-  def toAttributes = {
-    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList
+  def util = XsdAppInfo.util
+
+  def getAttributeValue(qName: XsdQName) = {
+    qName.getLocalName match {
+      case ATTRIBUTES.SOURCE.LOCALNAME => optSource
+    }
   }
+//  def toAttributes = {
+//    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList
+//  }
 
 }
 
@@ -27,10 +34,10 @@ object XsdAppInfo {
 
     def qName = ELEMENTS.APPINFO.QNAME
 
-    def parser[EE >: XsdAppInfo] : Iteratee[XmlElement,EE] = {
+    def parser[EE >: XsdAppInfo] : Parser[XmlElement,EE] = {
       for{
-        element <- QNamePeekParser(qName)
-        optSource <- OptionalAttributePeekParser(ATTRIBUTES.SOURCE.QNAME, XsdAnyURI.parseString)
+        element <- Parser.tell[XmlElement]
+        optSource <- optionalAttributeParser(ATTRIBUTES.SOURCE.QNAME, Try.parser((XsdAnyURI.parseString)))
       } yield
           XsdAppInfo(
             optSource = optSource,
@@ -38,6 +45,7 @@ object XsdAppInfo {
           )
     }
 
+    def attributes = Seq(ATTRIBUTES.SOURCE.QNAME)
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq()
   }

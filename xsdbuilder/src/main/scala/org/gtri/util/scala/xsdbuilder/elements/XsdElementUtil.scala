@@ -7,8 +7,9 @@ import org.gtri.util.scala.xmlbuilder.XmlElement
 
 trait XsdElementUtil[+E <: XsdElement] {
   def   qName   :   XsdQName
-  def   qNameToXsdAttributeMap : Map[XsdQName, XsdAttribute]
-  def   parser[EE >: E]  :   Iteratee[XmlElement,EE]
+//  def   qNameToXsdAttributeMap : Map[XsdQName, XsdAttribute]
+  def attributes : Seq[XsdQName]
+  def   parser[EE >: E]  :  Parser[XmlElement,EE]
 
   def   allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) : Seq[XsdElementUtil[XsdElement]]
 }

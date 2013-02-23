@@ -15,10 +15,20 @@ final case class XsdDocumentation(
 
   def qName = XsdDocumentation.util.qName
 
-  def toAttributes = {
-    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList :::
-    optXmlLang.map({ xmlLang => (XsdConstants.ATTRIBUTES.XML_LANG.QNAME,xmlLang.toString)}).toList
+  def util = XsdDocumentation.util
+
+  def getAttributeValue(qName: XsdQName) = {
+    qName.getLocalName match {
+      case ATTRIBUTES.SOURCE.LOCALNAME => optSource
+      case ATTRIBUTES.XML_LANG.LOCALNAME => optXmlLang
+      case ATTRIBUTES.VALUE.LOCALNAME => optValue
+    }
   }
+
+//  def toAttributes = {
+//    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList :::
+//    optXmlLang.map({ xmlLang => (XsdConstants.ATTRIBUTES.XML_LANG.QNAME,xmlLang.toString)}).toList
+//  }
 
 //  def pushTo(contract: XsdContract) {
 //    contract.addXsdDocumentation(
@@ -35,11 +45,11 @@ object XsdDocumentation {
 
     def qName = XsdConstants.ELEMENTS.DOCUMENTATION.QNAME
 
-    def parser[EE >: XsdDocumentation] : Iteratee[XmlElement,EE] = {
+    def parser[EE >: XsdDocumentation] : Parser[XmlElement,EE] = {
       for {
-        element <- QNamePeekParser(qName)
-        optSource <- OptionalAttributePeekParser(ATTRIBUTES.SOURCE.QNAME, XsdAnyURI.parseString)
-        optXmlLang <- OptionalAttributePeekParser(ATTRIBUTES.XML_LANG.QNAME, XsdToken.parseString)
+        element <- Parser.tell[XmlElement]
+        optSource <- optionalAttributeParser(ATTRIBUTES.SOURCE.QNAME, Try.parser(XsdAnyURI.parseString))
+        optXmlLang <- optionalAttributeParser(ATTRIBUTES.XML_LANG.QNAME, Try.parser(XsdToken.parseString))
       } yield
           XsdDocumentation(
             optSource = optSource,
@@ -49,6 +59,11 @@ object XsdDocumentation {
           )
     }
 
+    def attributes = Seq(
+      ATTRIBUTES.SOURCE.QNAME,
+      ATTRIBUTES.XML_LANG.QNAME,
+      ATTRIBUTES.VALUE.QNAME
+    )
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq.empty
 

@@ -5,7 +5,21 @@ import scala.collection.immutable.Seq
 
 object impl {
 
+  def flatMapParser[A,B,C](p: Parser[A,B], f: B => Parser[A,C])  : Parser[A,C] =
+    new Parser[A,C] {
+      def apply(a: A) = {
+        val t0 : Parser.Transition[B] = p(a)
+        Enumerable.impl.flatMapEnumerableTransition[Unit,B,Unit,Unit,C](t0, b => f(b)(a))
+      }
+    }
 
+  def mapParser[A,B,C](p: Parser[A,B], f: B => C)  : Parser[A,C] =
+    new Parser[A,C] {
+      def apply(a: A) = {
+        val t0 : Parser.Transition[B] = p(a)
+        Enumerable.impl.flatMapEnumerableTransition[Unit,B,Unit,Unit,C](t0, b => Parser.Succeed(f(b)))
+      }
+    }
 //  def mapParserTransition[A,B](s : Parser.Transition[A], f: A => B) : Parser.Transition[B] = {
 //    flatMapParserTransition[A,B](s, { (a : A) => bindParserTransition(f(a)) } )
 //  }

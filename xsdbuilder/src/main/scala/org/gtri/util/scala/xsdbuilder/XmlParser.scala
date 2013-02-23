@@ -6,120 +6,136 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.xmlbuilder.XmlElement
 
 object XmlParser {
-
-  case class QNamePeekParser(qName : XsdQName) extends Iteratee[XmlElement,XmlElement] {
-    import Iteratee._
-    case class Cont() extends State.Continuation[XmlElement, XmlElement] {
-      def apply(x : XmlElement) = {
-        if(x.qName == qName) {
-          Succeed(
-            value = x,
-            overflow = x :: Nil
-          )
-        } else {
-          Halt.fatal("")
-        }
+  type Try[A] = Either[java.lang.Throwable, A]
+  object Try {
+    def apply[A](a: => A) : Try[A] =
+      try {
+        Right(a)
+      } catch {
+        case t : Throwable => Left(t)
       }
-      def apply(eoi : EndOfInput) = Halt.fatal("")
+    def parser[A,B](f: A => B) : Parser[A,B] = { a =>
+      import Parser._
+      Try(f(a)) match {
+        case Right(b) => Succeed(b)
+        case Left(throwable) => Halt.fatal(throwable.getMessage, Some(throwable))
+      }
     }
-    def s0 = Cont()
+    def parser[A,B](f: A => B, default: => B) : Parser[A,B] = { a =>
+      import Parser._
+      Try(f(a)) match {
+        case Right(b) => Succeed(b)
+        case Left(throwable) => Halt.error(throwable.getMessage, Some(throwable), () => Succeed(default))
+      }
+    }
   }
 
-  case class RequiredAttributePeekParser[U](qName : XsdQName, parser: String => U, optValidValue: Option[() => U] = None) extends Iteratee[XmlElement,U] {
-    import Iteratee._
 
-    case class Cont() extends State.Continuation[XmlElement,U] {
-
-      def halt(message : String, cause : Option[Throwable]) : Transition[XmlElement,U] = {
-        optValidValue map { validValue =>
-          val recoverF = () => {
-            val value = validValue()
+  def requiredAttributeParser[U](attrQName : XsdQName, simpleTypeParser: Parser[String,U], optValGen: Option[() => U]) : Parser[XmlElement, U] = { (element : XmlElement) =>
+    import Parser._
+    def buildHalt(message : String, cause : Option[Throwable] = None) : Transition[U] = {
+      optValGen match {
+        case Some(gen) =>
+          val recoverF = { () => {
+            val value = gen()
             Succeed(
               value = value,
-              metadata = Issue.warn("Set required attribute to a valid value " + qName.toString + "='" + value.toString + "'") :: Nil
+              metadata = Issue.warn("Set required attribute to a generated value " + attrQName.toString + "='" + value.toString + "'") :: Nil
             )
-          }
+          }}
           Halt.error(message,cause,recoverF)
-        } getOrElse {
-          Halt.fatal(message,cause)
-        }
+        case None => Halt.fatal(message,cause)
       }
-
-      def apply(element : XmlElement) = {
-        // Is the attribute set?
-        if(element.attributesMap.contains(qName)) {
-          // Attribute is set - try to parser it
-          try {
-            // Return the parsed value AND overflow the input to allow flatMap/map chaining
-            Succeed(
-              value = parser(element.attributesMap(qName)),
-              overflow = element :: Nil
-            )
-          } catch {
-            case e : Exception =>
-            halt(e.getMessage,Some(e))
-          }
-        } else {
-          // Attribute is not set
-          halt("Missing required attribute " + qName, None)
-        }
-
-      }
-      def apply(x : EOI) = Halt.fatal("Missing input")
     }
 
-    def s0 = Cont()
-  }
-
-  case class OptionalAttributePeekParser[U](qName : XsdQName, parser: String => U) extends Iteratee[XmlElement,Option[U]] {
-    import Iteratee._
-
-    case class Cont() extends State.Continuation[XmlElement,Option[U]] {
-      def apply(element : XmlElement) = {
-        // Attribute set?
-        if(element.attributesMap.contains(qName)) {
-          // Attribute is set - try to downcast it
-          try {
-            // Return the parsed value AND overflow the input to allow flatMap/map chaining
-            Succeed(
-              value = Some(parser(element.attributesMap(qName))),
-              overflow = element :: Nil
-            )
-          } catch {
-            case e : Exception =>
-              Halt.error(
-                message = e.getMessage,
-                cause = Some(e),
-                recover = () => Succeed(
-                  value = None,
-                  metadata = Issue.warn("Ignorning optional attribute with invalid value " + qName.toString) :: Nil)
-              )
-          }
-        } else {
-          // Attribute is missing, return an unset value (success)
-          Succeed(
-            value = None,
-            overflow = element :: Nil
-          )
-        }
-
+    element.attributesMap.mapValues(attrStrValue => {
+      val t0 = simpleTypeParser(attrStrValue)
+      t0.state match {
+        case q : State.Success[U] => Succeed(q.value,t0.metadata)
+        case q : State.Halted[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
+        case q : State.Continuation[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
       }
-      def apply(x : EOI) = Halt.fatal("Missing input")
     }
-
-    def s0 = Cont()
+    ).getOrElse(
+      key = attrQName,
+      default = buildHalt("Missing required attribute " + attrQName)
+    )
   }
 
-  def parseAllOrNone[A](parser: String => A)(s : String) : Either[AllOrNoneCode, Set[A]] = {
-    s match {
-      case s : String if s == AllOrNoneCode.NONE.toString => Left(AllOrNoneCode.NONE)
-      case s : String if s == AllOrNoneCode.ALL.toString => Left(AllOrNoneCode.ALL)
-      case _ =>
-        val members =
-          for(member <- s.split("\\s+"))
-          yield parser(member)
-        Right(members.toSet)
+  def optionalAttributeParser[U](attrQName : XsdQName, simpleTypeParser: Parser[String,U]) : Parser[XmlElement, Option[U]] = { element =>
+    import Parser._
+    def buildHalt(message : String, cause : Option[Throwable] = None) : Transition[Option[U]] = {
+      val recoverF = { () => {
+        Succeed[Option[U]](
+          value = None,
+          metadata = Issue.warn("Unset optional attribute " + attrQName.toString) :: Nil
+        )
+      }}
+      Halt.error(message,cause,recoverF)
     }
+
+    element.attributesMap.mapValues[Transition[Option[U]]](attrStrValue => {
+        val t0 = simpleTypeParser(attrStrValue)
+        t0.state match {
+          case q : State.Success[U] => Succeed(Some(q.value),t0.metadata)
+          case q : State.Halted[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
+          case q : State.Continuation[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
+        }
+      }
+    ).getOrElse(
+      key = attrQName,
+      default = buildHalt("Missing required attribute " + attrQName)
+    )
   }
 
+//  def requiredAttributeParser[U](attrQName : XsdQName, simpleTypeParser: String => Try[U], optValGen: Option[() => U]) : Parser[XmlElement, U] = { element =>
+//    import Parser._
+//    def buildHalt(message : String, cause : Option[Throwable] = None) : Transition[U] = {
+//      optValGen match {
+//        case Some(gen) =>
+//          val recoverF = { () => {
+//            val value = gen()
+//            Succeed(
+//              value = value,
+//              metadata = Issue.warn("Set required attribute to a generated value " + attrQName.toString + "='" + value.toString + "'") :: Nil
+//            )
+//          }}
+//          Halt.error(message,cause,recoverF)
+//        case None => Halt.fatal(message,cause)
+//      }
+//    }
+//
+//    element.attributesMap.mapValues(attrStrValue =>
+//      simpleTypeParser(attrStrValue) match {
+//        case Right(value) => Succeed(value)
+//        case Left(exception) => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'", Some(exception))
+//      }
+//    ).getOrElse(
+//      key = attrQName,
+//      default = buildHalt("Missing required attribute " + attrQName)
+//    )
+//  }
+//
+//  def optionalAttributeParser[U](attrQName : XsdQName, simpleTypeParser: String => Try[U]) : Parser[XmlElement, Option[U]] = { element =>
+//    import Parser._
+//    def buildHalt(message : String, cause : Option[Throwable] = None) : Transition[Option[U]] = {
+//      val recoverF = { () => {
+//        Succeed[Option[U]](
+//          value = None,
+//          metadata = Issue.warn("Unset optional attribute " + attrQName.toString) :: Nil
+//        )
+//      }}
+//      Halt.error(message,cause,recoverF)
+//    }
+//
+//    element.attributesMap.mapValues[Transition[Option[U]]](attrStrValue =>
+//      simpleTypeParser(attrStrValue) match {
+//        case Right(value) => Succeed(Some(value))
+//        case Left(exception) => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'",Some(exception))
+//      }
+//    ).getOrElse(
+//      key = attrQName,
+//      default = buildHalt("Missing required attribute " + attrQName)
+//    )
+//  }
 }

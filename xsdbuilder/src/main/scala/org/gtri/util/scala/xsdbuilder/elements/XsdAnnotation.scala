@@ -15,9 +15,16 @@ final case class XsdAnnotation(
 
   def optValue = None
 
-  def toAttributes = {
-    optId.map({ id => (ATTRIBUTES.SOURCE.QNAME,id.toString)}).toList
+  def util = XsdAnnotation.util
+
+  def getAttributeValue(qName: XsdQName) = {
+    qName.getLocalName match {
+      case ATTRIBUTES.ID.LOCALNAME => optId
+    }
   }
+//  def toAttributes = {
+//    optId.map({ id => (ATTRIBUTES.SOURCE.QNAME,id.toString)}).toList
+//  }
 
 }
 
@@ -27,10 +34,10 @@ object XsdAnnotation {
 
     def qName = ELEMENTS.ANNOTATION.QNAME
 
-    def parser[EE >: XsdAnnotation] : Iteratee[XmlElement, EE] = {
+    def parser[EE >: XsdAnnotation] : Parser[XmlElement, EE] = {
       for{
-        element <- QNamePeekParser(qName)
-        optId <- OptionalAttributePeekParser(ATTRIBUTES.ID.QNAME, XsdId.parseString)
+        element <- Parser.tell[XmlElement]
+        optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))
       } yield {
           XsdAnnotation(
             optId = optId,
@@ -38,6 +45,8 @@ object XsdAnnotation {
           )
       }
     }
+
+    def attributes = Seq(ATTRIBUTES.ID.QNAME)
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq(XsdDocumentation.util, XsdAppInfo.util)
   }

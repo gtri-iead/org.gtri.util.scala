@@ -21,7 +21,7 @@ trait XsdElement {
 
   def toAttributes : Seq[(XsdQName,Any)] = {
     for {
-      key <- util.qNameToXsdAttributeMap.keySet.toSeq
+      key <- util.attributes.toSeq
       value <- getAttributeValue(key)
     } yield (key,value)
   }

@@ -19,9 +19,20 @@ final case class XsdAttribute(
 
   def optValue = None
 
-  def toAttributes = {
-    optId.map({ id => (ATTRIBUTES.SOURCE.QNAME,id.toString)}).toList
+  def util = XsdAttribute.util
+
+  def getAttributeValue(qName: XsdQName) = {
+    qName.getLocalName match {
+      case ATTRIBUTES.ID.LOCALNAME => optId
+      case ATTRIBUTES.NAME.LOCALNAME => Some(name)
+      case ATTRIBUTES.TYPE.LOCALNAME => Some(_type)
+      case ATTRIBUTES.DEFAULT.LOCALNAME => optDefault
+      case ATTRIBUTES.FIXED.LOCALNAME => optFixed
+    }
   }
+//  def toAttributes = {
+//    optId.map({ id => (ATTRIBUTES.SOURCE.QNAME,id.toString)}).toList
+//  }
 }
 
 object XsdAttribute {
@@ -33,20 +44,34 @@ object XsdAttribute {
     def randomString = java.lang.Long.toHexString(java.lang.Double.doubleToLongBits(java.lang.Math.random()))
     def genRandomName = new XsdName(new StringBuilder().append("AttributeGeneratedName").append(randomString).append(randomString).toString())
 
-    def parser[EE >: XsdAttribute] : Iteratee[XmlElement, EE] = {
+    def parser[EE >: XsdAttribute] : Parser[XmlElement, EE] = {
       for{
-        element <- QNamePeekParser(qName)
-        optId <- OptionalAttributePeekParser(ATTRIBUTES.ID.QNAME, XsdId.parseString)
-        name <- RequiredAttributePeekParser(ATTRIBUTES.NAME.QNAME, XsdName.parseString, Some(() => genRandomName _))
-        _type <- RequiredAttributePeekParser(ATTRIBUTES.TYPE.QNAME, { (s:String) => XsdQName.parseStringWithPrefix(s,element) },Some(() => XsdConstants.BUILTIN_DATATYPES.STRING.QNAME))
+        element <- Parser.tell[XmlElement]
+        optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))
+        name <- requiredAttributeParser[XsdName](ATTRIBUTES.NAME.QNAME, Try.parser(XsdName.parseString), Some(() => genRandomName))
+        // TODO: how to resolve qname prefix properly?
+        _type <- requiredAttributeParser(ATTRIBUTES.TYPE.QNAME, Try.parser((s:String) => XsdQName.parseStringWithPrefix(s,element)),Some(() => XsdConstants.BUILTIN_DATATYPES.STRING.QNAME))
+        optDefault <- optionalAttributeParser(ATTRIBUTES.DEFAULT.QNAME, Parser.tell[String])
+        optFixed <- optionalAttributeParser(ATTRIBUTES.FIXED.QNAME, Parser.tell[String])
       } yield {
         XsdAttribute(
           optId = optId,
           name = name,
+          _type = _type,
+          optDefault = optDefault,
+          optFixed = optFixed,
           optMetadata = Some(XsdElement.Metadata(element))
         )
       }
     }
+
+    def attributes = Seq(
+      ATTRIBUTES.ID.QNAME,
+      ATTRIBUTES.NAME.QNAME,
+      ATTRIBUTES.TYPE.QNAME,
+      ATTRIBUTES.DEFAULT.QNAME,
+      ATTRIBUTES.FIXED.QNAME
+    )
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq(XsdDocumentation.util, XsdAppInfo.util)
 

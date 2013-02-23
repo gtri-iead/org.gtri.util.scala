@@ -264,12 +264,12 @@ object impl {
    * @tparam A
    * @return
    */
-  def invertEnumerableTransitionTraversable[O,A](xs: Traversable[Transition[O,A]], xt: List[A] = Nil) : Transition[O,Seq[A]] = {
+  def sequenceEnumerableTransitionTraversable[O,A](xs: Traversable[Transition[O,A]], xt: List[A] = Nil) : Transition[O,Seq[A]] = {
     // TODO: optimize me?
     if(xs.isEmpty) {
       Succeed(xt.reverse)
     } else {
-      flatMapEnumerableTransition[O,A,Unit,O,Seq[A]](xs.head, { x => invertEnumerableTransitionTraversable(xs.tail, x :: xt) })
+      flatMapEnumerableTransition[O,A,Unit,O,Seq[A]](xs.head, { x => sequenceEnumerableTransitionTraversable(xs.tail, x :: xt) })
     }
   }
 }

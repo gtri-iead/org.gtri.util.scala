@@ -18,14 +18,14 @@
     You should have received a copy of the GNU General Public License
     along with org.gtri.util.xsdbuilder library. If not, see <http://www.gnu.org/licenses/>.
 
-*/package org.gtri.util.scala.xsdbuilder
+*/
+package org.gtri.util.scala.xsdbuilder
 
 import org.gtri.util.scala.statemachine._
 import elements._
 import org.gtri.util.xsddatatypes.XsdQName
 import org.gtri.util.scala.xmlbuilder._
-import org.gtri.util.scala.statemachine.StateMachine.State.Halted
-
+import scala.collection.immutable.Seq
 
 case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
 
@@ -114,28 +114,8 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    */
   def createStartElementParser[E <: XsdElement](next: StartXsdEvent => ParserState, util : XsdElementUtil[E]) : PartialParser = {
     case ev@StartXmlElementEvent(element, locator) if element.qName == util.qName =>
-      val plan : Plan[E] = List(element).toEnumerator compose util.parser
-      val result : Plan.Transition[E] = plan.run()
-      def mapHaltedRecover : Plan.State[E] => ParserDelta = {
-        case q : Plan.State.Continuation[E] =>
-          Halt.fatal("Failed to parse " + element)
-        case q:  Plan.State.Success[E] =>
-          val startEvent = StartXsdEvent(q.value,locator)
-          Continue(
-            state = next(startEvent),
-            output = startEvent :: Nil
-          )
-        case q:  Plan.State.Halted[E] =>
-          Transition(
-            state = Halted(
-              issues = q.issues,
-              optRecover = q.optRecover map { recover => () =>
-                mapHaltedRecover(recover().state)
-              }
-            )
-          )
-      }
-      mapHaltedRecover(result.state)
+      val t0 = util.parser(element)
+      t0.flatMap { e => Translator.Succeed[XmlEvent,XsdEvent](Seq(StartXsdEvent(e,locator))) }
   }
 
   /**
