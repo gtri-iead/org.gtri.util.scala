@@ -31,7 +31,11 @@ package object Iteratee {
       state     :   State[I,A],
       overflow  :   Seq[I]                        = Seq.empty,
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = StateMachine.Transition[I,Unit,A](state=state, overflow=overflow, metadata=metadata)
+    ) : Transition[I,A] = state.fold(
+      ifSuccess = q => new Succeed(state=q, output=Seq.empty, overflow=overflow, metadata=metadata),
+      ifHalted = q => new Halt(state=q, output=Seq.empty, overflow=overflow, metadata=metadata),
+      ifContinuation = q => new Continue(state=q, output=Seq.empty, metadata=metadata)
+    )
   }
 
   type State[I,A]             = StateMachine.State[I,Unit,A]
@@ -47,21 +51,24 @@ package object Iteratee {
     val Halted                = StateMachine.State.Halted
   }
 
+  type Continue[I,A] = StateMachine.Continue[I,Unit,A]
   object Continue {
     def apply[I,A](
       state     :   State.Continuation[I,A],
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = StateMachine.Continue[I,Unit,A](state=state, metadata=metadata)
+    ) = StateMachine.Continue[I,Unit,A](state=state, output=Seq.empty, metadata=metadata)
   }
 
+  type Succeed[I,A] = StateMachine.Succeed[I,Unit,A]
   object Succeed {
     def apply[I,A](
       value : A,
       overflow    :   Seq[I]                      = Seq.empty,
       metadata    :   Seq[Any]                    = Seq.empty
-    ) = StateMachine.Succeed[I,Unit,A](value=value, overflow=overflow, metadata=metadata)
+    ) = StateMachine.Succeed[I,Unit,A](value=value, output=Seq.empty, overflow=overflow, metadata=metadata)
   }
 
+  type Halt[I,A] = StateMachine.Halt[I,Unit,A]
   object Halt {
     def apply[I,A](
       issues      :   Seq[Issue],

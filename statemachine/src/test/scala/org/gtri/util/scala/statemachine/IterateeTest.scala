@@ -44,11 +44,12 @@ class IterateeTest extends FunSpec {
       val i3 : Iteratee[Int,Int] = TestRecoverSumIntIteratee(10)
       val i4 : Iteratee[Int,Int] = TestRecoverSumIntIteratee(10)
       val i5 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2;sum3 <- i3;sum4 <- i4) yield sum1 + sum2 + sum3 + sum4
-      val result = utility.applySeqToState(l,i5.s0)
-      assert(result.state.isHalted && result.state.isRecoverable)
-      val s : Iteratee.State.Halted[Int,Int] = result.state.asInstanceOf[Iteratee.State.Halted[Int,Int]]
+      val t0 = utility.applySeqToState(l,i5.s0)
+      assert(t0.state.isHalted && t0.state.isRecoverable)
+      val t0h : Iteratee.Halt[Int,Int] = t0.asInstanceOf[Iteratee.Halt[Int,Int]]
+      val s : Iteratee.State.Halted[Int,Int] = t0h.state
       val f : Plan.State.Halted[Int] => Boolean = { q => true }
-      val plan2 = result.overflow.toEnumerator compose s
+      val plan2 = t0h.overflow.toEnumerator compose s
       val (result2,_) = plan2.run(f)
       val optSum : Option[Int] = result2.state.toOption
       assert(optSum.isDefined && optSum.get == sum)
@@ -62,17 +63,19 @@ class IterateeTest extends FunSpec {
       val i1 : Iteratee[Int,Int] = TestRecoverSumIntIteratee(10)
       val i2 : Iteratee[Int,Int] = TestRecoverSumIntIteratee(10)
       val i3 : Iteratee[Int,Int] = for(sum1 <- i1;sum2 <- i2) yield { sum1 + sum2 }
-      val result1 = utility.applySeqToState(l,i3.s0)
-      assert(result1.state.isHalted && result1.state.isRecoverable)
-      val result2 = utility.recoverAll(result1.state.asInstanceOf[Iteratee.State.Halted[Int,Int]], f, Int.MaxValue)
-      assert(result2.state.isContinuation)
-      val result3 = utility.applySeqToState(result1.overflow,result2.state)
-      assert(result3.state.isHalted && result3.state.isRecoverable)
-      val result4 = utility.recoverAll(result3.state.asInstanceOf[Iteratee.State.Halted[Int,Int]], f, Int.MaxValue)
-      assert(result4.state.isContinuation)
-      val result5 = utility.applySeqToState(result3.overflow,result4.state)
-      assert(result5.state.isSuccess)
-      val optSum : Option[Int] = result5.state.toOption
+      val t1 = utility.applySeqToState(l,i3.s0)
+      assert(t1.state.isHalted && t1.state.isRecoverable)
+      val t1h = t1.asInstanceOf[Iteratee.Halt[Int,Int]]
+      val t2 = utility.recoverAll(t1.state.asInstanceOf[Iteratee.State.Halted[Int,Int]], f, Int.MaxValue)
+      assert(t2.state.isContinuation)
+      val t3 = utility.applySeqToState(t1h.overflow,t2.state)
+      assert(t3.state.isHalted && t3.state.isRecoverable)
+      val t3h = t3.asInstanceOf[Iteratee.Halt[Int,Int]]
+      val t4 = utility.recoverAll(t3.state.asInstanceOf[Iteratee.State.Halted[Int,Int]], f, Int.MaxValue)
+      assert(t4.state.isContinuation)
+      val t5 = utility.applySeqToState(t3h.overflow,t4.state)
+      assert(t5.state.isSuccess)
+      val optSum : Option[Int] = t5.state.toOption
       assert(optSum.isDefined && optSum.get == sum)
     }
 

@@ -5,12 +5,12 @@ import scala.collection.immutable.Seq
 package object Parser {
 
   type Transition[A] = StateMachine.Transition[Unit,Unit,A]
-  object Transition {
-    def apply[A](
-      state     :   State[A],
-      metadata  :   Seq[Any]                      = Seq.empty
-    ) = StateMachine.Transition[Unit,Unit,A](state=state, metadata=metadata)
-  }
+//  object Transition {
+//    def apply[A](
+//      state     :   State[A],
+//      metadata  :   Seq[Any]                      = Seq.empty
+//    ) = StateMachine.Transition[Unit,Unit,A](state=state, metadata=metadata)
+//  }
 
   type State[A] = StateMachine.State.Done[Unit,Unit,A]
   object State {
@@ -23,6 +23,8 @@ package object Parser {
     type Halted[A] = StateMachine.State.Halted[Unit,Unit,A]
     val Halted = StateMachine.State.Halted
   }
+
+  type Succeed[A] = StateMachine.Succeed[Unit,Unit,A]
   object Succeed {
     def apply[A](
       value : A,
@@ -30,6 +32,7 @@ package object Parser {
     ) = StateMachine.Succeed[Unit,Unit,A](value=value, metadata=metadata)
   }
 
+  type Halt[A] = StateMachine.Halt[Unit,Unit,A]
   object Halt {
     def apply[A](
       issues      :   Seq[Issue],

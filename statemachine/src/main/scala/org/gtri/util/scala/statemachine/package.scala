@@ -72,8 +72,12 @@ package object statemachine {
       self match {
         case q : State.Success[I,O,A] => Some(q.value)
         case q : State.Halted[I,O,A] =>
-          val (r,_) = haltedRecoverStrategy.recoverAll(q)
-          r.state.toOption
+          val (t0,_) = haltedRecoverStrategy.recoverAll(q)
+          t0.fold(
+            ifSucceed = t0 => Some(t0.state.value),
+            ifHalt = t0 => None,
+            ifContinue = t0 => None
+          )
         case q : State.Continuation[I,O,A] => None
       }
     }

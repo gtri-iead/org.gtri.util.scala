@@ -28,33 +28,66 @@ trait StateMachine[I,O,A] {
   def s0 : State[I,O,A]
 }
 object StateMachine {
-  final case class Transition[I,O,A](
-    state         :   State[I,O,A],
-    output        :   Seq[O]                        = Seq.empty,
-    overflow      :   Seq[I]                        = Seq.empty,
-    metadata      :   Seq[Any]                      = Seq.empty
-  )
+  sealed trait Transition[I,O,A] {
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X, ifContinue: Continue[I,O,A] => X) : X
+    def state     :   State[I,O,A]
+    def output    :   Seq[O]
+    def metadata  :   Seq[Any]
+  }
 
-  object Continue {
+  object Transition {
     def apply[I,O,A](
-      state       :   State.Continuation[I,O,A],
-      output      :   Seq[O]                        = Seq.empty,
-      metadata    :   Seq[Any]                      = Seq.empty
-    ) = Transition[I,O,A](
-      state     =   state,
-      output    =   output,
-      overflow  =   Seq.empty,
-      metadata  =   metadata
-    )
+      state : State[I,O,A]
+    ) : Transition[I,O,A] = state.fold(
+        ifSuccess = q => Succeed(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
+        ifHalted = q => Halt(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
+        ifContinuation = q => Continue(state=q,output=Seq.empty,metadata=Seq.empty)
+      )
+  }
+
+  final case class Continue[I,O,A](
+    state         :   State.Continuation[I,O,A],
+    output        :   Seq[O] = Seq.empty[O],
+    metadata      :   Seq[Any] = Seq.empty[Any]
+  ) extends Transition[I,O,A] {
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X, ifContinue: Continue[I,O,A] => X) = ifContinue(this)
+  }
+
+//  object Continue {
+//    def apply[I,O,A](
+//      state       :   State.Continuation[I,O,A],
+//      output      :   Seq[O]                        = Seq.empty,
+//      metadata    :   Seq[Any]                      = Seq.empty
+//    ) = new Continue[I,O,A](
+//      state     =   state,
+//      output    =   output,
+//      metadata  =   metadata
+//    )
+//  }
+
+  sealed trait DoneTransition[I,O,A] extends Transition[I,O,A] {
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) : X
+    override def state : State.Done[I,O,A]
+    def overflow : Seq[I]
+  }
+
+  final case class Succeed[I,O,A](
+    state         :   State.Success[I,O,A],
+    output        :   Seq[O],
+    overflow      :   Seq[I],
+    metadata      :   Seq[Any]
+  ) extends DoneTransition[I,O,A] {
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X, ifContinue: Continue[I,O,A] => X) = ifSucceed(this)
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) = ifSucceed(this)
   }
 
   object Succeed {
     def apply[I,O,A](
       value       :   A,
-      output      :   Seq[O]                        = Seq.empty,
-      overflow    :   Seq[I]                        = Seq.empty,
-      metadata    :   Seq[Any]                      = Seq.empty
-    ) = Transition[I,O,A](
+      output      :   Seq[O] = Seq.empty[O],
+      overflow    :   Seq[I] = Seq.empty[I],
+      metadata    :   Seq[Any] = Seq.empty[Any]
+    ) = new Succeed[I,O,A](
       state     =   State.Success(value),
       output    =   output,
       overflow  =   overflow,
@@ -62,14 +95,24 @@ object StateMachine {
     )
   }
 
+  final case class Halt[I,O,A](
+    state         :   State.Halted[I,O,A],
+    output        :   Seq[O],
+    overflow      :   Seq[I],
+    metadata      :   Seq[Any]
+  ) extends DoneTransition[I,O,A] {
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X, ifContinue: Continue[I,O,A] => X) = ifHalt(this)
+    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) = ifHalt(this)
+  }
+
   object Halt {
     def apply[I,O,A](
       issues      :   Seq[Issue],
-      optRecover  :   Option[() => Transition[I,O,A]]   = None,
-      output      :   Seq[O]                            = Seq.empty,
-      overflow    :   Seq[I]                            = Seq.empty,
-      metadata    :   Seq[Any]                          = Seq.empty
-    ) = Transition[I,O,A](
+      optRecover  :   Option[() => Transition[I,O,A]],
+      output      :   Seq[O]                            = Seq.empty[O],
+      overflow    :   Seq[I]                            = Seq.empty[I],
+      metadata    :   Seq[Any]                          = Seq.empty[Any]
+    ) : Halt[I,O,A] = new Halt[I,O,A](
         state     =   State.Halted(
         issues        =   issues,
         optRecover    =   optRecover
@@ -82,25 +125,25 @@ object StateMachine {
       message     :   String,
       cause       :   Option[Throwable]            = None,
       recover     :   () => Transition[I,O,A],
-      output      :   Seq[O]                       = Seq.empty,
-      overflow    :   Seq[I]                       = Seq.empty,
-      metadata    :   Seq[Any]                     = Seq.empty
-    ) = apply[I,O,A](issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+      output      :   Seq[O]                       = Seq.empty[O],
+      overflow    :   Seq[I]                       = Seq.empty[I],
+      metadata    :   Seq[Any]                     = Seq.empty[Any]
+    ) = new Halt[I,O,A](State.Halted(issues=Seq(Issue.warn(message,cause)), optRecover=Some(recover)), output=output, overflow=overflow, metadata=metadata)
     def error[I,O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
       recover     :   () => Transition[I,O,A],
-      output      :   Seq[O]                       = Seq.empty,
-      overflow    :   Seq[I]                       = Seq.empty,
-      metadata    :   Seq[Any]                     = Seq.empty
-    ) = apply[I,O,A](issues=Seq(Issue.error(message,cause)), optRecover=Some(recover), output=output, overflow=overflow, metadata=metadata)
+      output      :   Seq[O]                       = Seq.empty[O],
+      overflow    :   Seq[I]                       = Seq.empty[I],
+      metadata    :   Seq[Any]                     = Seq.empty[Any]
+    ) = new Halt[I,O,A](State.Halted(issues=Seq(Issue.error(message,cause)), optRecover=Some(recover)), output=output, overflow=overflow, metadata=metadata)
     def fatal[I,O,A](
       message     :   String,
       cause       :   Option[Throwable]           = None,
-      output      :   Seq[O]                      = Seq.empty,
-      overflow    :   Seq[I]                      = Seq.empty,
-      metadata    :   Seq[Any]                    = Seq.empty
-    ) = apply[I,O,A](issues=Seq(Issue.fatal(message,cause)), output=output, overflow=overflow, metadata=metadata)
+      output      :   Seq[O]                      = Seq.empty[O],
+      overflow    :   Seq[I]                      = Seq.empty[I],
+      metadata    :   Seq[Any]                    = Seq.empty[Any]
+    ) = new Halt[I,O,A](State.Halted(issues=Seq(Issue.fatal(message,cause))), output=output, overflow=overflow, metadata=metadata)
   }
 
   sealed trait State[I,O,A] {

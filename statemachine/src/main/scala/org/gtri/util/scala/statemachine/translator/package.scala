@@ -31,7 +31,11 @@ package object Translator {
       output    :   Seq[O]                      = Seq.empty,
       overflow  :   Seq[I]                      = Seq.empty,
       metadata  :   Seq[Any]                    = Seq.empty
-    ) = StateMachine.Transition[I,O,Unit](state=state, output=output, overflow=overflow, metadata=metadata)
+    ) : Transition[I,O] = state.fold(
+      ifSuccess = q => new Succeed(state=q, output=output, overflow=overflow, metadata=metadata),
+      ifHalted = q => new Halt(state=q, output=output, overflow=overflow, metadata=metadata),
+      ifContinuation = q => new Continue(state=q, output=output, metadata=metadata)
+    )
   }
 
   type State[I,O]             = StateMachine.State[I,O,Unit]
@@ -47,6 +51,7 @@ package object Translator {
     val Halted                 = StateMachine.State.Halted
   }
 
+  type Continue[I,O] = StateMachine.Continue[I,O,Unit]
   object Continue {
     def apply[I,O](
       state     :   State.Continuation[I,O],
@@ -55,6 +60,7 @@ package object Translator {
     ) = StateMachine.Continue[I,O,Unit](state=state, output=output, metadata=metadata)
   }
 
+  type Succeed[I,O] = StateMachine.Succeed[I,O,Unit]
   object Succeed {
     def apply[I,O](
       output    :   Seq[O]                        = Seq.empty,
@@ -63,6 +69,7 @@ package object Translator {
     ) = StateMachine.Succeed[I,O,Unit](value=(), output=output, overflow=overflow, metadata=metadata)
   }
 
+  type Halt[I,O] = StateMachine.Halt[I,O,Unit]
   object Halt {
     def apply[I,O](
       issues      :   Seq[Issue],

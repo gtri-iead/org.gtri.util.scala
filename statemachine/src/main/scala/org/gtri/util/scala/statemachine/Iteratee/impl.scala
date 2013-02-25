@@ -51,27 +51,31 @@ object impl {
    */
   def bindIterateeState[I,A](value : A) : State[I,A] = State.Success(value)
 
-  private[impl] def flatMapIterateeTransition[I,A,B](r : Transition[I,A], f: A => State[I,B]) : Transition[I,B] = {
-    r.state.fold(
-      ifContinuation = { q =>
+  private[impl] def flatMapIterateeTransition[I,A,B](t0 : Transition[I,A], f: A => State[I,B]) : Transition[I,B] = {
+    t0.fold(
+      ifContinue = { t0 =>
         Transition(
-          state = FlatMapIterateeContinuation(q,f),
-          metadata = r.metadata
+          state = FlatMapIterateeContinuation(t0.state,f),
+          metadata = t0.metadata
         )
       },
-      ifSuccess = { q =>
-        val transition = utility.applySeqToState(r.overflow,f(q.value))
-        transition.copy(metadata = transition.metadata ++ r.metadata)
+      ifSucceed = { t0 =>
+        val t1 = utility.applySeqToState(t0.overflow,f(t0.state.value))
+        t1.fold(
+          ifSucceed = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata),
+          ifHalt = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata),
+          ifContinue = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata)
+        )
       },
-      ifHalted = { q =>
-        val optRecover : Option[() => Transition[I,B]] = q.optRecover map { recover => () => flatMapIterateeTransition[I,A,B](recover(), f) }
+      ifHalt = { t0 =>
+        val optRecover : Option[() => Transition[I,B]] = t0.state.optRecover map { recover => () => flatMapIterateeTransition[I,A,B](recover(), f) }
         Transition(
           state = State.Halted(
-            issues = q.issues,
+            issues = t0.state.issues,
             optRecover = optRecover
           ),
-          overflow = r.overflow,
-          metadata = r.metadata
+          overflow = t0.overflow,
+          metadata = t0.metadata
         )
       }
     )

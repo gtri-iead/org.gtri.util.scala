@@ -33,7 +33,11 @@ package object Enumerator {
       state     :   State[O],
       output    :   Seq[O]                    = Seq.empty,
       metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Transition[Unit,O,Unit](state=state, output=output, metadata=metadata)
+    ) : Transition[O] = state.fold(
+      ifSuccess = q => new Succeed(state=q, output=output, overflow=Seq.empty, metadata=metadata),
+      ifHalted = q => new Halt(state=q, output=output, overflow=Seq.empty, metadata=metadata),
+      ifContinuation = q => new Continue(state=q, output=output, metadata=metadata)
+    )
   }
 
   type State[O]             = StateMachine.State[Unit, O, Unit]
@@ -48,14 +52,17 @@ package object Enumerator {
     val Halted              = StateMachine.State.Halted
   }
 
-  object Continue {
-    def apply[O](
-      state     :   State.Continuation[O],
-      output    :   Seq[O]                    = Seq.empty,
-      metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Continue[Unit,O,Unit](state=state, output=output, metadata=metadata)
-  }
+  type Continue[O] = StateMachine.Continue[Unit,O,Unit]
+  val Continue = StateMachine.Continue
+//  object Continue {
+//    def apply[O](
+//      state     :   State.Continuation[O],
+//      output    :   Seq[O]                    = Seq.empty,
+//      metadata  :   Seq[Any]                  = Seq.empty
+//    ) = StateMachine.Continue[Unit,O,Unit](state=state, output=output, metadata=metadata)
+//  }
 
+  type Succeed[O] = StateMachine.Succeed[Unit,O,Unit]
   object Succeed {
     def apply[O](
       output    :   Seq[O]                    = Seq.empty,
@@ -63,6 +70,7 @@ package object Enumerator {
     ) = StateMachine.Succeed[Unit,O,Unit](value=(), output=output, metadata=metadata)
   }
 
+  type Halt[O] = StateMachine.Halt[Unit,O,Unit]
   object Halt {
     def apply[O](
       issues      :   Seq[Issue],

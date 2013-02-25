@@ -55,7 +55,7 @@ package object utility {
               // Add Halted issues as metadata
               r.metadata ++= q.issues
               // Clear overflow -- Not needed since accumulate below will replace it
-              // r.overflow = Nil
+              // t0.overflow = Nil
               // Recover and accumulate
               r.accumulate(q.optRecover.get.apply())
               // Apply overflow to recovered state and accumulate
@@ -68,7 +68,7 @@ package object utility {
                 issues = Issue.fatal("Max recover attempts reached") :: Nil
               )
               // Dump output and overflow
-              r.output.clear
+              r.output.clear()
               r.overflow = Nil
               // Return accumulated metadata
               done = true
@@ -99,34 +99,70 @@ package object utility {
 //  }
 
   /**
-   * Force a the State of a Transition to be either Success or Failure by applying EndOfInput when required and
+   * Force a Transition to be either Succeed or Halt by applying EndOfInput when required and
    * accumulate the Transitions.
-   * @param t
+   * @param t0
    * @tparam I
    * @tparam O
    * @tparam A
    * @return
    */
-  def forceDoneTransition[I,O,A](t: Transition[I,O,A]) : Transition[I,O,A] = {
-    t.state.fold(
-      ifContinuation = { q => accumulateTransitions(t, q.apply(EndOfInput)) },
-      ifSuccess = { q => t },
-      ifHalted = { q => t }
+  def forceDoneTransition[I,O,A](t0: Transition[I,O,A]) : Transition[I,O,A] = {
+    t0.fold[Transition[I,O,A]](
+      ifSucceed = t0 => t0,
+      ifHalt = t0 => t0,
+      ifContinue = t0 => accumulateTransitions(t0, t0.state.apply(EndOfInput))
+    )
+  }
+
+  /**
+   * Force a State to be either Success or Halted by applying EndOfInput when required and
+   * return the Transitions.
+   * @param s0
+   * @tparam I
+   * @tparam O
+   * @tparam A
+   * @return
+   */
+  def forceDoneState[I,O,A](s0: State[I,O,A]) : Transition[I,O,A] = {
+    s0.fold[Transition[I,O,A]](
+      ifSuccess = q => Succeed(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
+      ifHalted = q => Halt(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
+      ifContinuation = q => q.apply(EndOfInput)
     )
   }
 
   /**
    * Accumulate two Transitions such that second.state and second.overflow replace first.state and first.overflow AND
    * second.output/metadata are appended to first.output/metadata
-   * @param first
-   * @param second
+    * @param t0
+   * @param t1
    * @tparam I
    * @tparam O
    * @tparam A
    * @return
    */
-  def accumulateTransitions[I,O,A](first : Transition[I,O,A], second : Transition[I,O,A]) : Transition[I,O,A] = {
-    Transition(second.state, second.output ++ first.output, second.overflow, second.metadata ++ first.metadata)
+  def accumulateTransitions[I,O,A](t0 : Transition[I,O,A], t1 : Transition[I,O,A]) : Transition[I,O,A] = {
+    t0.fold[Transition[I,O,A]](
+      ifSucceed = t0 =>
+        t1.fold[Transition[I,O,A]](
+          ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata), 
+          ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifContinue = t1 => Continue(state=t1.state, output=t1.output ++ t0.output, metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifHalt = t0 =>
+        t1.fold[Transition[I,O,A]](
+          ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifContinue = t1 => Continue(state=t1.state, output=t1.output ++ t0.output, metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifContinue = t0 =>
+        t1.fold[Transition[I,O,A]](
+          ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifContinue = t1 => Continue(state=t1.state, output=t1.output ++ t0.output, metadata=t1.metadata ++ t0.metadata)
+        )
+    )
   }
 
 
@@ -160,22 +196,50 @@ package object utility {
     var overflow : Seq[I] = Seq.empty[I],
     metadata : mutable.Buffer[Any] = mutable.Buffer.empty[Any]
   ) {
-    def accumulate(r: Transition[I,O,A]) = {
-      state = r.state
-      output ++= r.output
-      overflow = r.overflow
-      metadata ++= r.metadata
+    def accumulate(t0: Transition[I,O,A]) = {
+      t0.fold[Unit](
+        ifSucceed = t0 => {
+          state = t0.state
+          output ++= t0.output
+          overflow = t0.overflow
+          metadata ++= t0.metadata          
+        },
+        ifHalt = t0 => {
+          state = t0.state
+          output ++= t0.output
+          overflow = t0.overflow
+          metadata ++= t0.metadata          
+        },
+        ifContinue = t0 => {
+          state = t0.state
+          output ++= t0.output
+          metadata ++= t0.metadata
+        }
+      )
     }
-    def toTransition : Transition[I,O,A] = Transition(state, output.toVector, overflow, metadata.toVector)
+    def toTransition : Transition[I,O,A] = {
+      state.fold[Transition[I,O,A]](
+        ifSuccess = q => Succeed(state=q,output=output.toVector,overflow=overflow,metadata=metadata.toVector),
+        ifHalted = q => Halt(state=q,output=output.toVector,overflow=overflow,metadata=metadata.toVector),
+        ifContinuation = q => Continue(state=q,output=output.toVector,metadata=metadata.toVector)
+      )
+    }
   }
+
   object TransitionAccumulator {
-    def apply[I,O,A](r : Transition[I,O,A]) : TransitionAccumulator[I,O,A] = TransitionAccumulator(r.state,r.output.toBuffer,r.overflow,r.metadata.toBuffer)
+    def apply[I,O,A](t0: Transition[I,O,A]) : TransitionAccumulator[I,O,A] = {
+      t0.fold[TransitionAccumulator[I,O,A]](
+        ifSucceed = t0 => TransitionAccumulator(t0.state, t0.output.toBuffer, t0.overflow, t0.metadata.toBuffer),
+        ifHalt = t0 => TransitionAccumulator(t0.state, t0.output.toBuffer, t0.overflow, t0.metadata.toBuffer),
+        ifContinue = t0 => TransitionAccumulator(t0.state, t0.output.toBuffer, Seq.empty, t0.metadata.toBuffer)
+      )
+    }
   }
 
   def applyInputToState[I,O,A](input: Input[I], s: State[I,O,A]) : Transition[I,O,A] = {
     input match {
       case chunk : Chunk[I] => applySeqToState(chunk.xs,s)
-      case _ : EndOfInput => forceDoneTransition(Transition(s))
+      case _ : EndOfInput => forceDoneState(s)
     }
   }
 
@@ -193,7 +257,7 @@ package object utility {
   def applySeqToTransition[I,O,A](xs: Seq[I], t: Transition[I,O,A]) : Transition[I,O,A] = {
     if(xs.nonEmpty) {
       var done = false
-      val r = TransitionAccumulator(t)
+      val r = TransitionAccumulator[I,O,A](t)
       var i = xs
       do {
         r.state.fold(
@@ -228,32 +292,50 @@ package object utility {
   }
 
   private[utility] def composeTransition[A,B,C,D,ZZ](t0: Transition[A,B,ZZ], t1: Transition[B,C,D]) : Transition[A,C,D] = {
-    val state : State[A,C,D] =
-    t0.state.fold(
-      ifContinuation  =   s0 => t1.state.fold( ifContinuation = s1 => compose(s0,s1), ifSuccess = s1 => compose(s0,s1), ifHalted = s1 => compose(s0,s1,t1.overflow)),
-      ifSuccess       =   s0 => t1.state.fold( ifContinuation = s1 => compose(s0,s1), ifSuccess = s1 => compose(s0,s1), ifHalted = s1 => compose(s0,s1,t1.overflow)),
-      ifHalted        =   s0 => t1.state.fold( ifContinuation = s1 => compose(s0,s1), ifSuccess = s1 => compose(s0,s1), ifHalted = s1 => compose(s0,s1,t1.overflow))
-    )
-    Transition(
-      state     = state,
-      output    = t1.output,
-      overflow  = t0.overflow,
-      metadata  = t1.metadata ++ t0.metadata
+    t0.fold[Transition[A,C,D]](
+      ifContinue = t0 =>
+        t1.fold[Transition[A,C,D]](
+          ifContinue = t1 =>
+            Continue(state=compose(t0.state,t1.state),output=t1.output,metadata=t1.metadata ++ t0.metadata),
+          ifSucceed = t1 =>
+            Succeed(state=compose(t0.state,t1.state),output=t1.output,overflow=Seq.empty,metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 =>
+            Halt(state=compose(t0.state,t1.state,t1.overflow),output=t1.output,overflow=Seq.empty,metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifSucceed = t0 =>
+        t1.fold[Transition[A,C,D]](
+          ifContinue = t1 =>
+            Halt(state=compose(t0.state,t1.state),output=t1.output,overflow=Seq.empty,metadata=t1.metadata ++ t0.metadata),
+          ifSucceed = t1 =>
+            Succeed(state=compose(t0.state,t1.state),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 =>
+            Halt(compose(t0.state,t1.state,t1.overflow),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifHalt = t0 =>
+        t1.fold[Transition[A,C,D]](
+          ifContinue = t1 =>
+            Halt(compose(t0.state,t1.state),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata),
+          ifSucceed = t1 =>
+            Halt(compose(t0.state,t1.state),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 =>
+            Halt(compose(t0.state,t1.state,t1.overflow),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata)
+        )
     )
   }
 
   private[utility] def composeTransitionAndStateContinue[A,B,C,D,ZZ](t0: Transition[A,B,ZZ], s1: State.Continuation[B,C,D]) : Transition[A,C,D] = {
-    val t1 = s1(t0.output)
-    // TODO: t1 could have overflow, though with Success overflow could probably be ignored
-    //TODO: t1 could be Halted -- what about overflow from it?
-    //If t0 Success force r1 done and composeTransition otherwise just composeTransition
-    t0.state.fold(
-      ifSuccess = { q =>
-      // If t0 is Success, feed an EOI to t1 since t1 will not receive further input
+    t0.fold[Transition[A,C,D]](
+      ifSucceed = t0 => {
+        val t1 = s1(t0.output)
+        // If t0 is Success, feed an EOI to t1 since t1 will not receive further input
         composeTransition(t0, forceDoneTransition(t1))
       },
-      ifContinuation = { q => composeTransition(t0,t1) },
-      ifHalted = { q =>
+      ifHalt = t0 => {
+        val t1 = s1(t0.output)
+        composeTransition(t0,t1)
+      },
+      ifContinue = t0 => {
+        val t1 = s1(t0.output)
         composeTransition(t0,t1)
       }
     )
@@ -267,7 +349,8 @@ package object utility {
 
       def apply(x: EndOfInput) = {
         val eoi_t0 : Transition[A,B,ZZ] = s0(x)
-        val t1 : Transition[B,C,D] = s1(eoi_t0.output)
+        val output = eoi_t0.fold(ifSucceed = t => t.output, ifHalt = t => t.output, ifContinue = t => t.output)
+        val t1 : Transition[B,C,D] = s1(output)
         val eoi_t1 : Transition[B,C,D] = forceDoneTransition(t1)
         composeTransition(eoi_t0, eoi_t1)
       }
@@ -280,7 +363,7 @@ package object utility {
     val optRecover : Option[() => Transition[A,C,D]] =
       s1.optRecover map { recover =>
         () => {
-          val t0 = Transition(s0)
+          val t0 = Continue(s0)
           val t1 = applySeqToTransition(overflow, recover())
           composeTransition(t0,t1)
         }
@@ -295,7 +378,12 @@ package object utility {
     // Note: If Success/Continuation occurs, EOI should be applied to Continuation, however we can't do that here since it would discard the Transition
     // Note: can only reach here if user passes in Success/Continuation - recursion from ComposedState above handles EOI correctly
     // TODO: test to verify this
-    val optRecover : Option[() => Transition[A,C,D]] = Some(() => composeTransition(Transition(s0),s1.apply(EndOfInput)))
+    val optRecover : Option[() => Transition[A,C,D]] = Some(
+      () => composeTransition(
+        new Succeed(state=s0, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
+        s1.apply(EndOfInput)
+      )
+    )
     val msg = "No more xs available from s0, EOI should have been applied to s1 prior to composing s0 and s1"
     State.Halted(
       issues = Seq(Issue(WARN,msg)),
@@ -308,7 +396,7 @@ package object utility {
     val optRecover : Option[() => Transition[A,C,D]] =
       s1.optRecover map { recover =>
         () => {
-          val t0 = Transition(s0)
+          val t0 = new Succeed(state = s0, output=Seq.empty[B], overflow=Seq.empty[A],metadata=Seq.empty[Any])
           val t1 = applySeqToTransition(overflow, recover())
           composeTransition(t0,t1)
         }
@@ -336,11 +424,13 @@ package object utility {
     val optRecover : Option[() => Transition[A,C,D]] =
       s0.optRecover map { recover =>
         { () =>
-          val t0 = recover()
-          Transition(
-            state = State.Success(s1.value),
-            overflow = t0.overflow,
-            metadata = t0.metadata
+          val t0 : Transition[A,B,ZZ] = recover()
+          t0.fold[Transition[A,C,D]](
+            ifSucceed = t0 => new Succeed(state=State.Success(s1.value),output=Seq.empty[C],overflow=t0.overflow,metadata=t0.metadata),
+            ifHalt = t0 => Halt(state=compose(t0.state, s1),output=Seq.empty,overflow=t0.overflow,metadata=t0.metadata),
+            ifContinue = t0 =>
+              // Note: output Seq[B] from t0 is thrown away here
+              new Succeed(state=State.Success(s1.value),output=Seq.empty[C], overflow=Seq.empty[A], metadata=t0.metadata)
           )
         }
       }

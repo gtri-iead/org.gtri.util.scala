@@ -30,7 +30,11 @@ package object Plan {
     def apply[A](
       state     :   State[A],
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = StateMachine.Transition[Unit,Unit,A](state=state, metadata=metadata)
+    ) : Transition[A] = state.fold(
+      ifSuccess = q => new Succeed(state=q, output=Seq.empty, overflow=Seq.empty, metadata=metadata),
+      ifHalted = q => new Halt(state=q, output=Seq.empty, overflow=Seq.empty, metadata=metadata),
+      ifContinuation = q => new Continue(state=q, output=Seq.empty, metadata=metadata)
+    )
   }
 
   type State[A]             = StateMachine.State[Unit,Unit,A]
@@ -46,13 +50,15 @@ package object Plan {
     val Halted               = StateMachine.State.Halted
   }
 
+  type Continue[A] = StateMachine.Continue[Unit,Unit,A]
   object Continue {
     def apply[A](
       state     :   State.Continuation[A],
       metadata  :   Seq[Any]                      = Seq.empty
-    ) = StateMachine.Continue[Unit,Unit,A](state=state, metadata=metadata)
+    ) = StateMachine.Continue[Unit,Unit,A](state=state, output=Seq.empty, metadata=metadata)
   }
 
+  type Succeed[A] = StateMachine.Succeed[Unit,Unit,A]
   object Succeed {
     def apply[A](
       value : A,
@@ -60,6 +66,7 @@ package object Plan {
     ) = StateMachine.Succeed[Unit,Unit,A](value=value, metadata=metadata)
   }
 
+  type Halt[A] = StateMachine.Halt[Unit,Unit,A]
   object Halt {
     def apply[A](
       issues      :   Seq[Issue],

@@ -31,7 +31,11 @@ package object Enumerable {
       state     :   State[O,A],
       output    :   Seq[O]                    = Seq.empty,
       metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Transition[Unit,O,A](state=state, output=output, metadata=metadata)
+    ) : Transition[O,A] = state.fold(
+      ifSuccess = q => new Succeed(state=q, output=output, overflow=Seq.empty, metadata=metadata),
+      ifHalted = q => new Halt(state=q, output=output, overflow=Seq.empty, metadata=metadata),
+      ifContinuation = q => new Continue(state=q, output=output, metadata=metadata)
+    )
   }
 
   type State[O,A]             = StateMachine.State[Unit, O, A]
@@ -46,29 +50,20 @@ package object Enumerable {
     val Halted                 = StateMachine.State.Halted
   }
 
-  object Continue {
-    def apply[O,A](
-      state     :   State.Continuation[O,A],
-      output    :   Seq[O]                    = Seq.empty,
-      metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Continue[Unit,O,A](state=state, output=output, metadata=metadata)
-  }
+  type Continue[O,A] = StateMachine.Continue[Unit,O,A]
+  val Continue = StateMachine.Continue
 
-  object Succeed {
-    def apply[O,A](
-      value     :   A,
-      output    :   Seq[O]                    = Seq.empty,
-      metadata  :   Seq[Any]                  = Seq.empty
-    ) = StateMachine.Succeed[Unit,O,A](value=value, output=output, metadata=metadata)
-  }
+  type Succeed[O,A] = StateMachine.Succeed[Unit,O,A]
+  val Succeed = StateMachine.Succeed
 
+  type Halt[O,A] = StateMachine.Halt[Unit,O,A]
   object Halt {
     def apply[O,A](
       issues      :   Seq[Issue],
       optRecover  :   Option[() => Transition[O,A]] = None,
       output      :   Seq[O]                        = Seq.empty,
-      metadata    :   Seq[Any]                      = Seq.empty    
-    ) = StateMachine.Halt[Unit,O,A](issues=issues, optRecover=optRecover, output=output, metadata=metadata) 
+      metadata    :   Seq[Any]                      = Seq.empty
+    ) = StateMachine.Halt[Unit,O,A](issues=issues, optRecover=optRecover, output=output, metadata=metadata)
     def warn[O,A](
       message     :   String,
       cause       :   Option[Throwable]            = None,
