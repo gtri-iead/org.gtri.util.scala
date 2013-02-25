@@ -27,7 +27,7 @@ class ParserTest extends FunSpec {
 //      }
 //  }
   describe("A Parser[A]") {
-      def parser1(s : String) : Parser.Transition[Int] = {
+      def parser1 : Parser[String,Int] = { s =>
         try {
           Parser.Succeed(s.toInt)
         } catch {
@@ -36,7 +36,29 @@ class ParserTest extends FunSpec {
           })
         }
       }
-    it("should composable") {
+    it("should be composable") {
+      val p : Parser[String,Int] =
+        for {
+          v1 <- parser1
+          v2 <- parser1
+        } yield v1 + v2
+      val t0 = p("1")
+      assert(t0 == Parser.Succeed(2))
+    }
+    it("should be composable even one Halts") {
+      val p : Parser[String,Int] =
+        for {
+          v1 <- parser1
+          v2 <- parser1
+        } yield v1 + v2
+      val t0 = p("asdf")
+      assert(t0.state.isHalted && t0.state.isRecoverable)
+      val t1 : Parser.Transition[Int] = t0.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
+      assert(t0.state.isHalted && t0.state.isRecoverable)
+      val t2 : Parser.Transition[Int] = t1.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
+      assert(t2 == Parser.Succeed(200))
+    }
+    it("Transition should be composable") {
       val i : Parser.Transition[Int] =
         for {
           v1 <- parser1("1")
@@ -44,7 +66,7 @@ class ParserTest extends FunSpec {
         } yield v1 + v2
       assert(i == Parser.Succeed(3))
     }
-    it("should result in halted composable") {
+    it("Transition should be composable into a Halted if one of the parsers Halts") {
       val i : Parser.Transition[Int] =
         for {
           v1 <- parser1("1")
@@ -55,24 +77,24 @@ class ParserTest extends FunSpec {
       val s1 : Parser.Transition[Int] = i.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
       assert(s1 == Parser.Succeed(103))
     }
-    it("should be composable from n parsers") {
+    it("Transition should be composable from n Parser Transitions") {
       val v : Seq[String] = "1 2 3 4".split("\\s+").toIndexedSeq
       val t : Seq[Parser.Transition[Int]] =  v map { s => parser1(s) }
-      val t0 : Parser.Transition[Seq[Int]] = t.invert
+      val t0 : Parser.Transition[Seq[Int]] = t.sequence
       assert(t0 == Parser.Succeed(List(1,2,3,4)))
     }
-    it("should be composable from n parsers even when one halts") {
+    it("Transtion should be composable from n Parser Transition even when one halts") {
       val v : Seq[String] = "1 2 asdf 3 4".split("\\s+").toIndexedSeq
       val t : Seq[Parser.Transition[Int]] =  v map { s => parser1(s) }
-      val t0 : Parser.Transition[Seq[Int]] = t.invert
+      val t0 : Parser.Transition[Seq[Int]] = t.sequence
       assert(t0.state.isHalted && t0.state.isRecoverable)
       val t1 : Parser.Transition[Int] = t0.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
       assert(t1 == Parser.Succeed(List(1,2,100,3,4)))
     }
-    it("should be convertable to a Translator Transition") {
+    it("Transition should be convertable to a Translator Transition") {
       val v : Seq[String] = "1 2 asdf 3 4".split("\\s+").toIndexedSeq
       val t : Seq[Parser.Transition[Int]] =  v map { s => parser1(s) }
-      val t0 : Parser.Transition[Seq[Int]] = t.invert
+      val t0 : Parser.Transition[Seq[Int]] = t.sequence
       assert(t0.state.isHalted && t0.state.isRecoverable)
       val t1 : Translator.Transition[Float,Int] = t0.flatMap { xs => Translator.Succeed[Float,Int](xs) }
       assert(t1.state.isHalted && t1.state.isRecoverable)
