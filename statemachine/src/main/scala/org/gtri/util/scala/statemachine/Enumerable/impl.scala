@@ -150,7 +150,7 @@ object impl {
 //   * @return
 //   */
 //  def mapEnumerableTransitionToTranslator[O,A,II,OO](t: Transition[O,A], ifSuccess: A => Translator.Transition[II,OO]) : Translator.Transition[II,OO] = {
-//    t.state.fold(
+//    t.state.doneFold(
 //      ifContinuation = { q =>
 //        // Run the enumerable to extract the value or get a halted state
 //        val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,A])
@@ -186,7 +186,7 @@ object impl {
 //   * @return
 //   */
 //  def mapEnumerableToIterateeValue[O,A,II,OO,AA](t: Transition[O,A], f: A => AA) : StateMachine.Transition[II,OO,AA] = {
-//    t.state.fold(
+//    t.state.doneFold(
 //      ifContinuation = { q =>
 //        // Run the enumerable to extract the value or get a halted state
 //        val (t0, _) = Enumerable.impl.runEnumerableTransition(t, HaltedRecoveryStrategy.STRICT[Unit,O,A])
@@ -294,10 +294,10 @@ object impl {
    * @return
    */
   def flatMapEnumerableDoneTransition[O,A,II,OO,B](t0 : DoneTransition[O,A], f: A => StateMachine.DoneTransition[II,OO,B]) : StateMachine.DoneTransition[II,OO,B] = {
-    t0.fold(
+    t0.doneFold(
       ifSucceed = { t0 =>
         val t1 = f(t0.state.value)
-        t1.fold(
+        t1.doneFold(
           ifSucceed = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata),
           ifHalt = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata)
         )

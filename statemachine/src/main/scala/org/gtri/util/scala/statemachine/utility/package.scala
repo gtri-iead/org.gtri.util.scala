@@ -91,7 +91,7 @@ package object utility {
 //   * @return
 //   */
 //  def forceDoneState[I,O,A](state: State[I,O,A]) : Transition[I,O,A] = {
-//    state.fold(
+//    state.doneFold(
 //      ifContinuation = { s => s.apply(EndOfInput) },
 //      ifSuccess = { s => Transition(s) },
 //      ifHalted = { s => Transition(s) }
@@ -112,11 +112,12 @@ package object utility {
       ifSucceed = t0 => t0,
       ifHalt = t0 => t0,
       ifContinue = t0 => {
-        val t1 = accumulateTransitions(t0, t0.state.apply(EndOfInput))
-        t1.fold[DoneTransition[I,O,A]](
+        val t1 : DoneTransition[I,O,A] = accumulateTransitions(t0, t0.state.apply(EndOfInput))
+        t1.doneFold[DoneTransition[I,O,A]](
           ifSucceed = t1 => t1,
-          ifHalt = t1 => t1,
-          ifContinue = t1 => throw new IllegalStateException
+          ifHalt = t1 => t1
+//          ,
+//          ifContinue = t1 => throw new IllegalStateException
         )
       }
     )
@@ -137,10 +138,11 @@ package object utility {
       ifHalted = q => Halt(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
       ifContinuation = q => {
         val t1 = q.apply(EndOfInput)
-        t1.fold[DoneTransition[I,O,A]](
+        t1.doneFold[DoneTransition[I,O,A]](
           ifSucceed = t1 => t1,
-          ifHalt = t1 => t1,
-          ifContinue = t1 => throw new IllegalStateException
+          ifHalt = t1 => t1
+//          ,
+//          ifContinue = t1 => throw new IllegalStateException
         )
       }
     )
@@ -175,6 +177,27 @@ package object utility {
           ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
           ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
           ifContinue = t1 => Continue(state=t1.state, output=t1.output ++ t0.output, metadata=t1.metadata ++ t0.metadata)
+        )
+    )
+  }
+
+  // TODO: DRY me
+  def accumulateTransitions[I,O,A](t0 : Transition[I,O,A], t1 : DoneTransition[I,O,A]) : DoneTransition[I,O,A] = {
+    t0.fold[DoneTransition[I,O,A]](
+      ifSucceed = t0 =>
+        t1.doneFold[DoneTransition[I,O,A]](
+          ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifHalt = t0 =>
+        t1.doneFold[DoneTransition[I,O,A]](
+          ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifContinue = t0 =>
+        t1.doneFold[DoneTransition[I,O,A]](
+          ifSucceed = t1 => Succeed(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 => Halt(state=t1.state, output=t1.output ++ t0.output, overflow=t1.overflow, metadata=t1.metadata ++ t0.metadata)
         )
     )
   }
@@ -337,6 +360,26 @@ package object utility {
     )
   }
 
+  // TODO: DRY me
+  private[utility] def composeDoneTransition[A,B,C,D,ZZ](t0: DoneTransition[A,B,ZZ], t1: DoneTransition[B,C,D]) : DoneTransition[A,C,D] = {
+    t0.doneFold[DoneTransition[A,C,D]](
+      ifSucceed = t0 =>
+        t1.doneFold[DoneTransition[A,C,D]](
+          ifSucceed = t1 =>
+            Succeed(state=compose(t0.state,t1.state),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 =>
+            Halt(compose(t0.state,t1.state,t1.overflow),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata)
+        ),
+      ifHalt = t0 =>
+        t1.doneFold[DoneTransition[A,C,D]](
+          ifSucceed = t1 =>
+            Halt(compose(t0.state,t1.state),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata),
+          ifHalt = t1 =>
+            Halt(compose(t0.state,t1.state,t1.overflow),output=t1.output,overflow=t0.overflow,metadata=t1.metadata ++ t0.metadata)
+        )
+    )
+  }
+
   private[utility] def composeTransitionAndStateContinue[A,B,C,D,ZZ](t0: Transition[A,B,ZZ], s1: State.Continuation[B,C,D]) : Transition[A,C,D] = {
     t0.fold[Transition[A,C,D]](
       ifSucceed = t0 => {
@@ -362,11 +405,11 @@ package object utility {
       def apply(x: A) = composeTransitionAndStateContinue(s0(x),s1)
 
       def apply(x: EndOfInput) = {
-        val eoi_t0 : Transition[A,B,ZZ] = s0(x)
+        val eoi_t0 : DoneTransition[A,B,ZZ] = s0(x)
         val output = eoi_t0.fold(ifSucceed = t => t.output, ifHalt = t => t.output, ifContinue = t => t.output)
         val t1 : Transition[B,C,D] = s1(output)
-        val eoi_t1 : Transition[B,C,D] = forceDoneTransition(t1)
-        composeTransition(eoi_t0, eoi_t1)
+        val eoi_t1 : DoneTransition[B,C,D] = forceDoneTransition(t1)
+        composeDoneTransition(eoi_t0, eoi_t1)
       }
   }
 

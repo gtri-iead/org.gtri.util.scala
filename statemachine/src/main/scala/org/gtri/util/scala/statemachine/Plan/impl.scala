@@ -39,7 +39,7 @@
 //
 //
 //  def flatMapPlanState[A,II,OO,BB](s : Plan.State[A], f: A => StateMachine.State[II,OO,BB]) : StateMachine.State[II,OO,BB] = {
-//    s.fold(
+//    s.doneFold(
 //      ifContinuation = { q =>
 ////        val (t,_) = Enumerable.impl.runEnumerableState(s, HaltedRecoveryStrategy.STRICT[Unit,Unit,A])
 ////        if(t.state.isContinuation) {

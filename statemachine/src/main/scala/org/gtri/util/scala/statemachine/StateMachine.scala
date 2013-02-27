@@ -66,7 +66,7 @@ object StateMachine {
 //  }
 
   sealed trait DoneTransition[I,O,A] extends Transition[I,O,A] {
-    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) : X
+    def doneFold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) : X
     override def state : State.Done[I,O,A]
     def overflow : Seq[I]
   }
@@ -78,7 +78,7 @@ object StateMachine {
     metadata      :   Seq[Any]
   ) extends DoneTransition[I,O,A] {
     def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X, ifContinue: Continue[I,O,A] => X) = ifSucceed(this)
-    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) = ifSucceed(this)
+    def doneFold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) = ifSucceed(this)
   }
 
   object Succeed {
@@ -102,7 +102,7 @@ object StateMachine {
     metadata      :   Seq[Any]
   ) extends DoneTransition[I,O,A] {
     def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X, ifContinue: Continue[I,O,A] => X) = ifHalt(this)
-    def fold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) = ifHalt(this)
+    def doneFold[X](ifSucceed: Succeed[I,O,A] => X, ifHalt: Halt[I,O,A] => X) = ifHalt(this)
   }
 
   object Halt {
@@ -169,7 +169,7 @@ object StateMachine {
 
       def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applySeqToState(xs,this)
       def apply( x   : I          ) : Transition[I,O,A]
-      def apply( x   : EndOfInput ) : Transition[I,O,A]
+      def apply( x   : EndOfInput ) : DoneTransition[I,O,A]
 
       final def fold[X](
         ifContinuation  : State.Continuation  [I,O,A] => X,

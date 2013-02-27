@@ -69,11 +69,37 @@ object impl {
       },
       ifHalt = { t0 =>
         val optRecover : Option[() => Transition[I,B]] = t0.state.optRecover map { recover => () => flatMapIterateeTransition[I,A,B](recover(), f) }
-        Transition(
+        new Halt(
           state = State.Halted(
             issues = t0.state.issues,
             optRecover = optRecover
           ),
+          output = t0.output,
+          overflow = t0.overflow,
+          metadata = t0.metadata
+        )
+      }
+    )
+  }
+
+  // TODO: DRY me
+  private[impl] def flatMapIterateeDoneTransition[I,A,B](t0 : DoneTransition[I,A], f: A => State[I,B]) : DoneTransition[I,B] = {
+    t0.doneFold[DoneTransition[I,B]](
+      ifSucceed = { t0 =>
+        val t1 = utility.forceDoneTransition(utility.applySeqToState(t0.overflow,f(t0.state.value)))
+        t1.doneFold(
+          ifSucceed = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata),
+          ifHalt = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata)
+        )
+      },
+      ifHalt = { t0 =>
+        val optRecover : Option[() => Transition[I,B]] = t0.state.optRecover map { recover => () => flatMapIterateeTransition[I,A,B](recover(), f) }
+        new Halt(
+          state = State.Halted(
+            issues = t0.state.issues,
+            optRecover = optRecover
+          ),
+          output = t0.output,
           overflow = t0.overflow,
           metadata = t0.metadata
         )
@@ -87,7 +113,7 @@ object impl {
   
     def apply(x: I) = flatMapIterateeTransition(s.apply(x),f)
   
-    def apply(x: EndOfInput) = flatMapIterateeTransition(s.apply(x),f)
+    def apply(x: EndOfInput) = flatMapIterateeDoneTransition(s.apply(x),f)
   }
 
   /**

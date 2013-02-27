@@ -26,5 +26,5 @@ import org.gtri.util.scala.xmlbuilder.XmlWriter
 import java.io.OutputStream
 
 object XsdWriter {
-  def apply(out : OutputStream) = XsdToXmlGenerator() compose XmlWriter(out)
+  def apply(out : OutputStream) : Iteratee[XsdEvent, Unit] = XsdToXmlGenerator() compose XmlWriter(out)
 }

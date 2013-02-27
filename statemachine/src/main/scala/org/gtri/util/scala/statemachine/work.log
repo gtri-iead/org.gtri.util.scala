@@ -168,3 +168,9 @@ Feb 26
 #2aa: Halted.optRecover will always return a Transition, so users will always ultimately have to deal with Continue/Continuation
 #2ab: Should Parser be a completely different type, independent of the StateMachine structure?
 #2ac: Changing to DoneTransition will require adding flatMap/map methods for Enumerable DoneTransitions
+
+Feb 27
+
+#1: Completed change Parser[A] I => Transition to I => DoneTransition
+#1a: Modified forceDoneState/forceDoneTransition to throw IllegalStateException if Continue is returned after application of EndOfInput. Recover from Parser.Halt should utilize forceDone.
+#2: Changed apply(EndOfInput) : Transition to apply(EndOfInput) : DoneTransition

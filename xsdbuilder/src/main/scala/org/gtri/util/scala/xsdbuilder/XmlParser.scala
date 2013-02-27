@@ -6,6 +6,7 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.scala.xmlbuilder.XmlElement
 
 object XmlParser {
+  // TODO: move me to a common library
   type Try[A] = Either[java.lang.Throwable, A]
   object Try {
     def apply[A](a: => A) : Try[A] =
@@ -53,7 +54,6 @@ object XmlParser {
       t0.state match {
         case q : State.Success[U] => Succeed(q.value,t0.metadata)
         case q : State.Halted[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
-        case q : State.Continuation[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
       }
     }
     ).getOrElse(
@@ -79,7 +79,6 @@ object XmlParser {
         t0.state match {
           case q : State.Success[U] => Succeed(Some(q.value),t0.metadata)
           case q : State.Halted[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
-          case q : State.Continuation[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
         }
       }
     ).getOrElse(

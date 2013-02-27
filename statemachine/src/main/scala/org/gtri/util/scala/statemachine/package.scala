@@ -44,15 +44,6 @@ package object statemachine {
     def toEnumerator(chunkSize : Int) = utility.TraversableEnumerator(self, chunkSize)
   }
 
-//  implicit class implicitStateMachineTransitionOps[I,O,A](self : Transition[I,O,A]) {
-//    def isSuccess = self.state.isSuccess
-//    def isContinuation = self.state.isContinuation
-//    def isHalted = self.state.isHalted
-//    def isRecoverable = self.state.isRecoverable
-//    def toOption : Option[A] = self.state.toOption
-//    def toOption(haltedRecoverStrategy : HaltedRecoveryStrategy[I,O,A]) : Option[A] = self.state.toOption(haltedRecoverStrategy)
-//  }
-
   implicit class implicitStateOps[I,O,A](val self: State[I,O,A]) extends AnyVal {
     def isSuccess = self.fold(ifContinuation = { _ => false }, ifSuccess = { _ => true }, ifHalted = { _ => false})
     def isContinuation = self.fold(ifContinuation = { _ => true }, ifSuccess = { _ => false }, ifHalted = { _ => false })
@@ -87,11 +78,6 @@ package object statemachine {
     def apply(i: Input[I]) = utility.applyInputToState(i, self)
   }
 
-//  implicit class implicitHaltedStateOps[I,O,A](self : State.Halted[I,O,A]) {
-//    def recover : Transition[I,O,A] = self.optRecover map { recover => recover() } getOrElse Transition(self)
-//    def recoverAll : Transition[I,O,A] = self.optRecover map { recover => utility.recoverAll(recover(),)}
-//  }
-
   implicit class implicitStateMachineFromState[I,O,A](self : State[I,O,A]) extends StateMachine[I,O,A] {
     def s0 = self
   }
@@ -121,31 +107,15 @@ package object statemachine {
     def map[B](f: A => B) : Iteratee[I,B] = Iteratee.impl.mapIteratee(self, f)
   }
 
-//  implicit class implicitPlanStateOps[A](self: Plan.State[A]) {
-//    def flatMap[II,OO,BB](f: A => StateMachine.State[II,OO,BB]) : StateMachine.State[II,OO,BB] = Plan.impl.flatMapPlanState(self, f)
-//    def map[II,OO,BB](f: A => BB) : StateMachine.State[II,OO,BB] = Plan.impl.mapPlanState(self, f)
-//  }
-//
-//  implicit class implicitPlanOps[A](self: Plan[A]) {
-//    def flatMap[II,OO,BB](f: A => StateMachine[II,OO,BB]) : StateMachine[II,OO,BB] = Plan.impl.flatMapPlan[A,II,OO,BB](self, f)
-//    def map[II,OO,BB](f: A => BB) : StateMachine[II,OO,BB] = Plan.impl.mapPlan[A,II,OO,BB](self, f)
-//  }
-
   implicit class implicitEnumerableTransitionOps[O,A](val self: Enumerable.Transition[O,A]) extends AnyVal {
     def flatMap[II,OO,BB](f: A => StateMachine.Transition[II,OO,BB]) : StateMachine.Transition[II,OO,BB] = Enumerable.impl.flatMapEnumerableTransition(self,f)
     def map[II,OO,BB](f: A => BB) : StateMachine.Transition[II,OO,BB] = Enumerable.impl.mapEnumerableTransition(self,f)
-
-//    def toOutput[II,AA](ifSuccess : => StateMachine.State[II,A,AA]) : StateMachine.Transition[II,A,AA] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, ifSuccess)
-//    def toIteratee[I] : Iteratee.Transition[I,A] = Enumerable.impl.mapEnumerableToIterateeValue(self)
   }
 
   implicit class implicitEnumerableDoneTransitionOps[O,A](val self: Enumerable.DoneTransition[O,A]) extends AnyVal {
     def flatMap[II,OO,BB](f: A => StateMachine.DoneTransition[II,OO,BB]) : StateMachine.DoneTransition[II,OO,BB] = Enumerable.impl.flatMapEnumerableDoneTransition(self,f)
     def map[II,OO,BB](f: A => BB) : StateMachine.DoneTransition[II,OO,BB] = Enumerable.impl.mapEnumerableDoneTransition(self,f)
   }
-//  implicit class implicitEnumerableTransitionSeqOps[O,A](val self: Enumerable.Transition[O,Seq[A]]) extends AnyVal {
-//    def toTranslator[I] : Translator.Transition[I,A] = Enumerable.impl.convertEnumerableTransitionToTransitionOutput(self, Translator.State.Success())
-//  }
 
   implicit class implicitSeqEnumerableTransitionOps[O,A](val self: Traversable[Enumerable.Transition[O,A]]) extends AnyVal {
     def sequence : Enumerable.Transition[O,Seq[A]] = Enumerable.impl.sequenceEnumerableTransitionTraversable(self)
@@ -161,11 +131,10 @@ package object statemachine {
   }
 
   implicit class implicitIterateeContinuationFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee.State.Continuation[I,A] {
-//    override def apply(i: Input[I]) : Iteratee.Transition[I,A] = f(i)
     def apply(i: Input[I]) : Iteratee.Transition[I,A] = f(i)
     override def apply(xs: Seq[I]) : Iteratee.Transition[I,A] = f(Input(xs))
     def apply(x: I) : Iteratee.Transition[I,A] = f(Input(x))
-    def apply(x: EndOfInput) : Iteratee.Transition[I,A] = f(EndOfInput)
+    def apply(x: EndOfInput) : Iteratee.DoneTransition[I,A] = utility.forceDoneTransition(f(EndOfInput))
   }
 
   implicit class implicitIterateeFromFunction[I,A](f: Input[I] => Iteratee.Transition[I,A]) extends Iteratee[I,A] {

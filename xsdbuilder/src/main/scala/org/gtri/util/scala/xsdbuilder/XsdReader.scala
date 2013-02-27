@@ -26,5 +26,5 @@ import org.gtri.util.scala.xmlbuilder.XmlReader
 import java.io.InputStream
 
 object XsdReader {
-  def apply(in : InputStream, chunkSize : Int = 256) = XmlReader(in,chunkSize) compose XmlToXsdParser()
+  def apply(in : InputStream, chunkSize : Int = 256) : Enumerator[XsdEvent] = XmlReader(in,chunkSize) compose XmlToXsdParser()
 }
