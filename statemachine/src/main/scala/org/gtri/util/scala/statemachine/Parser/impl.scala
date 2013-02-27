@@ -1,25 +1,84 @@
 package org.gtri.util.scala.statemachine.Parser
 
 import org.gtri.util.scala.statemachine._
+import org.gtri.util.scala.statemachine.Parser._
 import scala.collection.immutable.Seq
 
 object impl {
 
-  def flatMapParser[A,B,C](p: Parser[A,B], f: B => Parser[A,C])  : Parser[A,C] =
-    new Parser[A,C] {
-      def apply(a: A) = {
-        val t0 : Parser.Transition[B] = p(a)
-        Enumerable.impl.flatMapEnumerableTransition[Unit,B,Unit,Unit,C](t0, b => f(b)(a))
-      }
-    }
+//  def flatMapTransition[B,C](t0: Transition[B], f: B => Transition[C]) : Transition[C] = {
+//    t0.fold[Transition[C]](
+//      ifContinue = t0 => throw new IllegalStateException,
+//      ifSucceed = t0 => {
+//        val t1 = f(t0.state.value)
+//        t1.fold[Transition[C]](
+//          ifContinue = t1 => throw new IllegalStateException,
+//          ifSucceed = t1 => t0.copy(metadata = t1.metadata ++ t0.metadata),
+//          ifHalt = t1 => t0.copy(metadata = t1.metadata ++ t0.metadata)
+//        )
+//      },
+//      ifHalt = t0 => {
+//        val optRecover : Option[() => Transition[C]] = t0.state.optRecover map { recover => { () =>
+//          flatMapTransition(recover(),f)
+//        }}
+//        new Halt(
+//          state = new State.Halted(
+//            issues = t0.state.issues,
+//            optRecover = optRecover
+//          ),
+//          output = Seq.empty,
+//          overflow = Seq.empty,
+//          metadata = t0.metadata
+//        )
+//      }
+//    )
+//  }
 
-  def mapParser[A,B,C](p: Parser[A,B], f: B => C)  : Parser[A,C] =
-    new Parser[A,C] {
-      def apply(a: A) = {
-        val t0 : Parser.Transition[B] = p(a)
-        Enumerable.impl.flatMapEnumerableTransition[Unit,B,Unit,Unit,C](t0, b => Parser.Succeed(f(b)))
-      }
-    }
+  def flatMapParser[A,B,C](p: Parser[A,B],f: B => Parser[A,C]) = new Parser[A,C] {
+    def apply(a: A) = Enumerable.impl.flatMapEnumerableDoneTransition[Unit,B,Unit,Unit,C](p(a),{ b => f(b)(a) })
+  }
+
+  def mapParser[A,B,C](p: Parser[A,B],f: B => C) = new Parser[A,C] {
+    def apply(a: A) = Enumerable.impl.flatMapEnumerableDoneTransition[Unit,B,Unit,Unit,C](p(a),{ b => Succeed(f(b)) })
+  }
+
+//  def flatMapTransition[A,B,C](t0: Transition[B], f: B => Transition[C]) : Transition[C] = {
+//    t0.fold(
+//      ifSucceed = t0 => f(t0.state.value),
+//      ifHalt = t0 => {
+//        val optRecover : Option[() => Transition[C]] = t0.state.optRecover map { recover => { () =>
+//          recover().fold(
+//            // TODO: remove me once apply(EndOfInput) returns DoneTransition
+//            ifContinue = t1 => throw new RuntimeException("Invalid Parser Transition "),
+//            ifSucceed = t1 => flatMapTransition(t1, f),
+//            ifHalt = t1 => flatMapTransition(t1,f)
+//          )
+//
+//        }}
+//        StateMachine.Halt(
+//          issues = t0.state.issues,
+//          optRecover = optRecover,
+//          metadata = t0.metadata
+//        )
+//      }
+//    )
+//  }
+//
+//  def flatMapParser[A,B,C](p: Parser[A,B], f: B => Parser[A,C]) = new Parser[A,C] {
+//      def apply(a: A) = {
+//        val t0 : Parser.Transition[B] = p(a)
+//        flatMapTransition[A,B,C](t0,b => f(b)(a))
+//      }
+//    }
+//
+//  def mapParser[A,B,C](p: Parser[A,B], f: B => C) = new Parser[A,C] {
+//    def apply(a: A) = {
+//      val t0 : Parser.Transition[B] = p(a)
+//      flatMapTransition[A,B,C](t0,b => Succeed(f(b)))
+//    }
+//  }
+
+
 //  def mapParserTransition[A,B](s : Parser.Transition[A], f: A => B) : Parser.Transition[B] = {
 //    flatMapParserTransition[A,B](s, { (a : A) => bindParserTransition(f(a)) } )
 //  }

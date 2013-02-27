@@ -167,7 +167,6 @@ object StateMachine {
 
     trait Continuation[I,O,A] extends State[I,O,A] {
 
-//      def apply( i   : Input[I]   ) : Transition[I,O,A] = utility.applyInputToState(i,this)
       def apply( xs  : Seq[I]     ) : Transition[I,O,A] = utility.applySeqToState(xs,this)
       def apply( x   : I          ) : Transition[I,O,A]
       def apply( x   : EndOfInput ) : Transition[I,O,A]

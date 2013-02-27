@@ -37,6 +37,8 @@ package object Plan {
     )
   }
 
+  type DoneTransition[A] = StateMachine.DoneTransition[Unit,Unit,A]
+
   type State[A]             = StateMachine.State[Unit,Unit,A]
   object State {
     type Done[A]            = StateMachine.State.Done[Unit,Unit,A]

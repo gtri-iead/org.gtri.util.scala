@@ -227,9 +227,9 @@ object impl {
   }
 
   /**
-   * Flat map an Enumerable Transition such that if the Transition is a continuation it is run until it is Success/Halt,
-   * If it is Success the value is re-packaged with metadata and returned. If it is Halted, a new Halted Transition is
-   * returned that recursively flatMaps the recover result (should one exist).
+   * Flat map an Enumerable DoneTransition such that if the Transition is Success the value is re-packaged with metadata
+   * and returned. If it is Halted, a new Halted Transition is returned that recursively flatMaps the recover result
+   * (should one exist).
    * @param t0
    * @param f
    * @tparam O
@@ -268,6 +268,56 @@ object impl {
   }
 
   /**
+   * Map an Enumerable DoneTransition in terms of bind/flatMap
+   * @param s
+   * @param f
+   * @tparam O
+   * @tparam A
+   * @tparam OO
+   * @tparam B
+   * @return
+   */
+  def mapEnumerableDoneTransition[O,A,II,OO,B](s : DoneTransition[O,A], f: A => B) : StateMachine.DoneTransition[II,OO,B] = {
+    flatMapEnumerableDoneTransition[O,A,II,OO,B](s, { (a : A) => StateMachine.Succeed(f(a)) } )
+  }
+
+/**
+   * Flat map an Enumerable Transition such that if the Transition is a continuation it is run until it is Success/Halt,
+   * If it is Success the value is re-packaged with metadata and returned. If it is Halted, a new Halted Transition is
+   * returned that recursively flatMaps the recover result (should one exist).
+   * @param t0
+   * @param f
+   * @tparam O
+   * @tparam A
+   * @tparam OO
+   * @tparam B
+   * @return
+   */
+  def flatMapEnumerableDoneTransition[O,A,II,OO,B](t0 : DoneTransition[O,A], f: A => StateMachine.DoneTransition[II,OO,B]) : StateMachine.DoneTransition[II,OO,B] = {
+    t0.fold(
+      ifSucceed = { t0 =>
+        val t1 = f(t0.state.value)
+        t1.fold(
+          ifSucceed = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata),
+          ifHalt = t1 => t1.copy(metadata = t1.metadata ++ t0.metadata)
+        )
+      },
+      ifHalt = { t0 =>
+        val optRecover : Option[() => StateMachine.Transition[II,OO,B]] = t0.state.optRecover map { recover => { () =>
+          val t1 = utility.forceDoneTransition(recover())
+          flatMapEnumerableDoneTransition(t1, f)
+        }}
+        StateMachine.Halt(
+          issues = t0.state.issues,
+          optRecover = optRecover,
+          metadata = t0.metadata
+        )
+      }
+    )
+  }
+
+
+  /**
    * Invert a collection of Transitions into a Transition of a collection.
    * @param xs
    * @param xt
@@ -283,4 +333,22 @@ object impl {
       flatMapEnumerableTransition[O,A,Unit,O,Seq[A]](xs.head, { x => sequenceEnumerableTransitionTraversable(xs.tail, x :: xt) })
     }
   }
+
+  /**
+   * Invert a collection of Transitions into a Transition of a collection.
+   * @param xs
+   * @param xt
+   * @tparam O
+   * @tparam A
+   * @return
+   */
+  def sequenceEnumerableDoneTransitionTraversable[O,A](xs: Traversable[DoneTransition[O,A]], xt: List[A] = Nil) : DoneTransition[O,Seq[A]] = {
+    // TODO: optimize me?
+    if(xs.isEmpty) {
+      Succeed(xt.reverse)
+    } else {
+      flatMapEnumerableDoneTransition[O,A,Unit,O,Seq[A]](xs.head, { x => sequenceEnumerableDoneTransitionTraversable(xs.tail, x :: xt) })
+    }
+  }
+
 }

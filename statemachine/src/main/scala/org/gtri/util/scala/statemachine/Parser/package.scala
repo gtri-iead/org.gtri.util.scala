@@ -4,7 +4,7 @@ import scala.collection.immutable.Seq
 
 package object Parser {
 
-  type Transition[A] = StateMachine.Transition[Unit,Unit,A]
+  type Transition[A] = StateMachine.DoneTransition[Unit,Unit,A]
 //  object Transition {
 //    def apply[A](
 //      state     :   State[A],

@@ -38,6 +38,8 @@ package object Enumerable {
     )
   }
 
+  type DoneTransition[O,A] = StateMachine.DoneTransition[Unit,O,A]
+
   type State[O,A]             = StateMachine.State[Unit, O, A]
   object State {
     type Continuation[O,A]    = StateMachine.State.Continuation[Unit, O, A]

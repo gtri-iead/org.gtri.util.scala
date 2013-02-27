@@ -156,3 +156,15 @@ Feb 17
 Feb 18
 
 #1: Need a way to flatMap/map a collection of Enumerable.Transitions: Seq[Enumerable.Transition[A]] -> Enumerable.Transition[Seq[A]]
+
+Feb 19-27
+
+#1: Rewrite to change Transition into sealed trait with 3 derived case classes: Succeed, Halt, Continue (also DoneTransition)
+
+Feb 26
+
+#1: TODO: Change apply(EndOfInput) : Transition to apply(EndOfInput) : DoneTransition
+#2: Should Parser[A] = I => StateMachine.Transition[Unit,Unit,A] be changed to I => StateMachine.DoneTransition[Unit,Unit,A] ?
+#2aa: Halted.optRecover will always return a Transition, so users will always ultimately have to deal with Continue/Continuation
+#2ab: Should Parser be a completely different type, independent of the StateMachine structure?
+#2ac: Changing to DoneTransition will require adding flatMap/map methods for Enumerable DoneTransitions

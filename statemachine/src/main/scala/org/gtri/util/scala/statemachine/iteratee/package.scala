@@ -38,6 +38,8 @@ package object Iteratee {
     )
   }
 
+  type DoneTransition[I,A] = StateMachine.DoneTransition[I,Unit,A]
+
   type State[I,A]             = StateMachine.State[I,Unit,A]
   object State {
     type Done[I,A]            = StateMachine.State.Done[I,Unit,A]

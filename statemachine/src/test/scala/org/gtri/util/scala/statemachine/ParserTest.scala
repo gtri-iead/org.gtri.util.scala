@@ -53,9 +53,9 @@ class ParserTest extends FunSpec {
         } yield v1 + v2
       val t0 = p("asdf")
       assert(t0.state.isHalted && t0.state.isRecoverable)
-      val t1 : Parser.Transition[Int] = t0.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
+      val t1 : Parser.Transition[Int] = utility.forceDoneTransition(t0.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get())
       assert(t0.state.isHalted && t0.state.isRecoverable)
-      val t2 : Parser.Transition[Int] = t1.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
+      val t2 : Parser.Transition[Int] = utility.forceDoneTransition(t1.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get())
       assert(t2 == Parser.Succeed(200))
     }
     it("Transition should be composable") {
@@ -74,7 +74,7 @@ class ParserTest extends FunSpec {
           v3 <- parser1("2")
         } yield v1 + v2 + v3
       assert(i.state.isHalted && i.state.isRecoverable)
-      val s1 : Parser.Transition[Int] = i.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
+      val s1 : Parser.Transition[Int] = utility.forceDoneTransition(i.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get())
       assert(s1 == Parser.Succeed(103))
     }
     it("Transition should be composable from n Parser Transitions") {
@@ -88,7 +88,7 @@ class ParserTest extends FunSpec {
       val t : Seq[Parser.Transition[Int]] =  v map { s => parser1(s) }
       val t0 : Parser.Transition[Seq[Int]] = t.sequence
       assert(t0.state.isHalted && t0.state.isRecoverable)
-      val t1 : Parser.Transition[Int] = t0.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get()
+      val t1 : Parser.Transition[Int] = utility.forceDoneTransition(t0.state.asInstanceOf[Parser.State.Halted[Int]].optRecover.get())
       assert(t1 == Parser.Succeed(List(1,2,100,3,4)))
     }
     it("Transition should be convertable to a Translator Transition") {

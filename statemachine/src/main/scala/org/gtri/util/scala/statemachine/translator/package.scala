@@ -38,6 +38,8 @@ package object Translator {
     )
   }
 
+  type DoneTransition[I,O] = StateMachine.DoneTransition[I,O,Unit]
+
   type State[I,O]             = StateMachine.State[I,O,Unit]
   object State {
     type Done[I,O]            = StateMachine.State.Done[I,O,Unit]

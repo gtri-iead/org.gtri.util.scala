@@ -107,11 +107,18 @@ package object utility {
    * @tparam A
    * @return
    */
-  def forceDoneTransition[I,O,A](t0: Transition[I,O,A]) : Transition[I,O,A] = {
-    t0.fold[Transition[I,O,A]](
+  def forceDoneTransition[I,O,A](t0: Transition[I,O,A]) : DoneTransition[I,O,A] = {
+    t0.fold[DoneTransition[I,O,A]](
       ifSucceed = t0 => t0,
       ifHalt = t0 => t0,
-      ifContinue = t0 => accumulateTransitions(t0, t0.state.apply(EndOfInput))
+      ifContinue = t0 => {
+        val t1 = accumulateTransitions(t0, t0.state.apply(EndOfInput))
+        t1.fold[DoneTransition[I,O,A]](
+          ifSucceed = t1 => t1,
+          ifHalt = t1 => t1,
+          ifContinue = t1 => throw new IllegalStateException
+        )
+      }
     )
   }
 
@@ -124,11 +131,18 @@ package object utility {
    * @tparam A
    * @return
    */
-  def forceDoneState[I,O,A](s0: State[I,O,A]) : Transition[I,O,A] = {
-    s0.fold[Transition[I,O,A]](
+  def forceDoneState[I,O,A](s0: State[I,O,A]) : DoneTransition[I,O,A] = {
+    s0.fold[DoneTransition[I,O,A]](
       ifSuccess = q => Succeed(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
       ifHalted = q => Halt(state=q, output=Seq.empty, overflow=Seq.empty, metadata=Seq.empty),
-      ifContinuation = q => q.apply(EndOfInput)
+      ifContinuation = q => {
+        val t1 = q.apply(EndOfInput)
+        t1.fold[DoneTransition[I,O,A]](
+          ifSucceed = t1 => t1,
+          ifHalt = t1 => t1,
+          ifContinue = t1 => throw new IllegalStateException
+        )
+      }
     )
   }
 
