@@ -17,14 +17,12 @@ final case class XsdAppInfo(
 
   def util = XsdAppInfo.util
 
-  def getAttributeValue(qName: XsdQName) = {
-    qName.getLocalName match {
-      case ATTRIBUTES.SOURCE.LOCALNAME => optSource
-    }
+  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+    {
+      optSource.map { (ATTRIBUTES.SOURCE.QNAME -> _.toString) } ::
+      Nil
+    }.flatten.toMap
   }
-//  def toAttributes = {
-//    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList
-//  }
 
 }
 
@@ -34,7 +32,7 @@ object XsdAppInfo {
 
     def qName = ELEMENTS.APPINFO.QNAME
 
-    def parser[EE >: XsdAppInfo] : Parser[XmlElement,EE] = {
+    def parser[EE >: XsdAppInfo](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement,EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optSource <- optionalAttributeParser(ATTRIBUTES.SOURCE.QNAME, Try.parser((XsdAnyURI.parseString)))
@@ -45,7 +43,7 @@ object XsdAppInfo {
           )
     }
 
-    def attributes = Seq(ATTRIBUTES.SOURCE.QNAME)
+    def attributes = Set(ATTRIBUTES.SOURCE.QNAME)
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq()
   }

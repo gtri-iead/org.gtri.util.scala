@@ -10,7 +10,7 @@ trait XsdElement {
   def   optValue       :   Option[String]
   def   optMetadata    :   Option[XsdElement.Metadata]
 
-  lazy val prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI] = {
+  def prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI] = {
     val o =
       for {
         metadata <- optMetadata
@@ -19,22 +19,24 @@ trait XsdElement {
     o.getOrElse(Map.empty)
   }
 
-  def toAttributes : Seq[(XsdQName,Any)] = {
-    for {
-      key <- util.attributes.toSeq
-      value <- getAttributeValue(key)
-    } yield (key,value)
-  }
+//  lazy val attributes : Seq[(XsdQName,String)] = {
+//    for {
+//      key <- util.attributes.toSeq
+//      value <- attribute(key)
+//    } yield (key,value)
+//  }
 
-  def toXmlElement = XmlElement(
+  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) : Map[XsdQName,String]
+
+  def toXmlElement(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = XmlElement(
       qName                     =   qName,
       optValue                  =   optValue,
-      attributesMap             =   (toAttributes map { tuple => (tuple._1,tuple._2.toString) }).toMap,
+      attributesMap             =   attributesMap(namespaceURIToPrefixResolver),
       prefixToNamespaceURIMap   =   prefixToNamespaceURIMap,
       optMetadata               =   optMetadata map { _.toXmlElementMetadata }
     )
 
-  def getAttributeValue(qName : XsdQName) : Option[Any]
+//  def attribute(qName : XsdQName) : Option[String]
 }
 
 object XsdElement {

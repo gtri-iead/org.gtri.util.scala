@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://testy.test.test"
+           attributeFormDefault="qualified"
+           blockDefault="extension restriction substitution"
+           finalDefault=""
+           elementFormDefault="qualified"
+           id="abc123"
+           xml:lang="en"
+           targetNamespace="http://testy.test.test"
+           version="1">
+    <!-- test comment -->
+    <xs:annotation>
+        <xs:appinfo source="zoo"/>
+        <xs:documentation>asdf</xs:documentation>
+    </xs:annotation>
+    <xs:import namespace="http://testy.test2.test2" schemaLocation=".../somewhere"/>
+    <xs:simpleType final="#all" name="name"/>
+</xs:schema>

@@ -174,3 +174,13 @@ Feb 27
 #1: Completed change Parser[A] I => Transition to I => DoneTransition
 #1a: Modified forceDoneState/forceDoneTransition to throw IllegalStateException if Continue is returned after application of EndOfInput. Recover from Parser.Halt should utilize forceDone.
 #2: Changed apply(EndOfInput) : Transition to apply(EndOfInput) : DoneTransition
+
+Mar 1
+
+#1: TODO: rename "Transition" Edge or Delta
+#2: TODO: remove output from Succeed/Halt
+#3: TODO: combine Succeed/Success and Halt/Halted keep Continue/Continuation distinction
+#4: TODO: rename Parser StepMachine
+#5: TODO: a function that can "parallel" compose Iteratees of the same type so that the input is applied to both Iteratees and the output is summed
+#6: Change flatMap/map for Iteratee into a concat method?
+#7: Add either flatMap/map or concat for Enumerators

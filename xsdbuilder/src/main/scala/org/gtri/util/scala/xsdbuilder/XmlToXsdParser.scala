@@ -115,7 +115,14 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
   def createStartElementParser[E <: XsdElement](next: StartXsdEvent => ParserState, util : XsdElementUtil[E]) : PartialParser = {
     case ev@StartXmlElementEvent(element, locator) if element.qName == util.qName =>
       val t0 = util.parser(element)
-      t0.flatMap { e => Translator.Succeed[XmlEvent,XsdEvent](Seq(StartXsdEvent(e,locator))) }
+
+      t0.toTransition.flatMap { e =>
+        val event = StartXsdEvent(e,locator)
+        Translator.Continue(
+          state = next(event),
+          output = event :: Nil
+        )
+      }
   }
 
   /**
@@ -168,9 +175,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
         orElse guardUnexpectedXmlEvent(this)
       )
 
-    def apply(event : XmlEvent) = {
-      doApply(event)
-    }
+    def apply(event : XmlEvent) = doApply(event)
 
     def apply(eoi: EndOfInput) = Succeed()
   }

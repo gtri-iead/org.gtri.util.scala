@@ -6,10 +6,10 @@ import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xmlbuilder.XmlElement
 
 trait XsdElementUtil[+E <: XsdElement] {
-  def   qName   :   XsdQName
+  def qName : XsdQName
 //  def   qNameToXsdAttributeMap : Map[XsdQName, XsdAttribute]
-  def attributes : Seq[XsdQName]
-  def   parser[EE >: E]  :  Parser[XmlElement,EE]
+  def attributes : Set[XsdQName]
+  def parser[EE >: E](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement,EE]
 
-  def   allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) : Seq[XsdElementUtil[XsdElement]]
+  def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) : Seq[XsdElementUtil[XsdElement]]
 }

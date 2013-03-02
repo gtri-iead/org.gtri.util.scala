@@ -107,6 +107,13 @@ package object statemachine {
     def map[B](f: A => B) : Iteratee[I,B] = Iteratee.impl.mapIteratee(self, f)
   }
 
+  implicit class implicitTransitionOps[I,O,A](val self: StateMachine.Transition[I,O,A]) extends AnyVal {
+    def isSucceed = self.fold(ifContinue = { _ => false }, ifSucceed = { _ => true }, ifHalt = { _ => false})
+    def isContinue = self.fold(ifContinue = { _ => true }, ifSucceed = { _ => false }, ifHalt = { _ => false })
+    def isHalt = self.fold(ifContinue = { _ => false }, ifSucceed = { _ => false }, ifHalt = { _ => true })
+    def isRecoverable = self.fold(ifContinue = { _ => false }, ifSucceed = { _ => false }, ifHalt = { t => t.state.optRecover.isDefined })
+  }
+
   implicit class implicitEnumerableTransitionOps[O,A](val self: Enumerable.Transition[O,A]) extends AnyVal {
     def flatMap[II,OO,BB](f: A => StateMachine.Transition[II,OO,BB]) : StateMachine.Transition[II,OO,BB] = Enumerable.impl.flatMapEnumerableTransition(self,f)
     def map[II,OO,BB](f: A => BB) : StateMachine.Transition[II,OO,BB] = Enumerable.impl.mapEnumerableTransition(self,f)
@@ -115,6 +122,8 @@ package object statemachine {
   implicit class implicitEnumerableDoneTransitionOps[O,A](val self: Enumerable.DoneTransition[O,A]) extends AnyVal {
     def flatMap[II,OO,BB](f: A => StateMachine.DoneTransition[II,OO,BB]) : StateMachine.DoneTransition[II,OO,BB] = Enumerable.impl.flatMapEnumerableDoneTransition(self,f)
     def map[II,OO,BB](f: A => BB) : StateMachine.DoneTransition[II,OO,BB] = Enumerable.impl.mapEnumerableDoneTransition(self,f)
+
+    def asTransition : Enumerable.Transition[O,A] = self
   }
 
   implicit class implicitSeqEnumerableTransitionOps[O,A](val self: Traversable[Enumerable.Transition[O,A]]) extends AnyVal {

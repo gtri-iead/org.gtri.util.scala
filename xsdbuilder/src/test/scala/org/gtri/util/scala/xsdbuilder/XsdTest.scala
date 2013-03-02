@@ -28,34 +28,40 @@ import org.gtri.util.scala.statemachine._
 import annotation.tailrec
 import difflib.{Patch, DiffUtils}
 import scala.collection.JavaConversions._
+import org.gtri.util.scala.xsdbuilder.{XsdToXmlGenerator, XmlToXsdParser, XsdWriter, XsdReader}
+import scala.collection.immutable.Seq
 
-class XmlTest extends FeatureSpec with GivenWhenThen {
-  feature("Callers can connect an XmlReader to an XmlWriter to form a plan that will read and write an XML File") {
+class XsdTest extends FeatureSpec with GivenWhenThen {
+  import XsdTest._
+  feature("Callers can connect an XsdReader to an XsdWriter to form a plan that will read and write an XML File") {
     scenario("std") {
-      Given("An an XmlReader and XmlWriter composed into a Plan")
-//      XmlTest.listPath(new File("."))
-      val f1 = new FileInputStream("src/test/resources/test.xml")
-      val f2 = new FileOutputStream("target/test.xml")
-//      val plan = xmlReader compose Translator.tee { println(_) } compose xmlWriter
-      val plan = XmlReader(f1) compose XmlWriter(f2)
+      Given("An an XsdReader and XsdWriter composed into a Plan")
+//      XsdTest.listPath(new File("."))
+      val xmlReader = XmlReader(new FileInputStream("src/test/resources/test.xml"),1)
+      val xmlWriter = XmlWriter(new FileOutputStream("target/test.xml"))
+//      val plan = xmlReader compose dumpStream("xmlReader") compose XmlToXsdParser() compose dumpStream("xmlToXsdParser") compose XsdToXmlGenerator() compose dumpStream("xsdToXmlGenerator") compose xmlWriter
+      val plan = xmlReader compose XmlToXsdParser() compose XsdToXmlGenerator() compose xmlWriter
       When("that plan is run")
       var result = plan.s0.step()
       while(result.state.isContinuation) {
         println(result.metadata)
         result = result.state.step()
       }
-      f1.close()
-      f2.close()
+//      val result = plan.run()
       Then("the result should be a success")
-      println(result)
+      println("result="+result)
       assert(result.state.isSuccess)
       And("the input and output files should match")
-      assert(XmlTest.streamsAreEqual(new FileInputStream("src/test/resources/test.xml"), new FileInputStream("target/test.xml")))
+      assert(XsdTest.streamsAreEqual(new FileInputStream("src/test/resources/test.xml"), new FileInputStream("target/test.xml")))
     }
   }
 }
 
-object XmlTest {
+object XsdTest {
+  def dumpStream[A](name: String) = Translator.collectTee[A] {
+    case Chunk(events) => println(name+"="+events)
+    case EndOfInput => println(name+"="+EndOfInput)
+  }
 
   def readLines(in : InputStream) : List[String] = readLines(new BufferedReader(new InputStreamReader(in)))
   @tailrec def readLines(reader : BufferedReader, xs : List[String] = Nil) : List[String] = {

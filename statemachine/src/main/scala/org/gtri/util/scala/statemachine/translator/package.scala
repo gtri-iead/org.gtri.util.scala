@@ -105,6 +105,16 @@ package object Translator {
     ) = StateMachine.Halt.fatal[I,O,Unit](message=message, cause=cause, overflow=overflow, metadata=metadata)
   }
 
+  // TODO: test me
+  def tee[A](f: A => Unit) : Translator[A,A] = new MapTranslator[A,A]({ a => f(a);a })
+  def teeEOI[A](f: EndOfInput => Unit) : Translator[A,A] = new EOITranslator[A]({ eoi => f(eoi);Nil })
+
+  def collectTee[A](f: PartialFunction[Input[A],Unit]) : Translator[A,A] = new MapInputTranslator[A,A]({ case i@Chunk(xs) => f(i);xs case i@EndOfInput => f(i);Nil })
+
+  def map[A,B](f: A => B) : Translator[A,B] = new MapTranslator[A,B](f)
+
+  def collect[A,B](f: PartialFunction[Input[A],Seq[B]]) : Translator[A,B] = new MapInputTranslator[A,B](f)
+
     /*
   ∑ => input alphabet
   Γ => output alphabet

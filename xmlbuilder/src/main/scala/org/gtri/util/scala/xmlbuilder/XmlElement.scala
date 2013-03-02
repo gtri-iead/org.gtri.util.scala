@@ -21,16 +21,12 @@
 */
 package org.gtri.util.scala.xmlbuilder
 
-import org.gtri.util.scala.exelog.noop._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdQName._
 import org.gtri.util.scala.xmlbuilder.XmlElement.Metadata
 
 
 object XmlElement {
-
-  implicit val thisclass =    classOf[XmlElement]
-  implicit val log : Log =    Logger.getLog(thisclass)
 
   case class Metadata(
     optRawAttributesOrder   :   Option[Seq[String]]         = None, // Note: this includes xmlns:XXX
@@ -100,7 +96,7 @@ case class XmlElement(
   attributesMap             :  Map[XsdQName, String]           = Map.empty,
   prefixToNamespaceURIMap   :  Map[XsdNCName, XsdAnyURI]       = Map.empty,
   optMetadata                  :  Option[Metadata]             = None
-)extends NamespaceURIToPrefixResolver with PrefixToNamespaceURIResolver {
+) {
 
   lazy val metadataOrderedAttributes : Option[Seq[(XsdQName,String)]] =
     for{
@@ -117,27 +113,6 @@ case class XmlElement(
       attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
     }
 
-  //  {
-//    log.block("orderAttributes") {
-//      +"Order attributes by attributesOrder optMetadata (if defined) or sort lexographically by name"
-//      val o : Option[Seq[(XsdQName,String)]] =
-//      val retv : Seq[(XsdQName,String)] =
-//        o.getOrElse(
-//          attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-//        )
-//
-//      if(optMetadata.isDefined && optMetadata.get.optAttributesOrder.isDefined) {
-//        ~"Sort by optMetadata attributesOrder"
-//        optMetadata.get.optAttributesOrder.get.map({
-//          qName => attributesMap.get(qName).map { optValue => (qName,optValue) }
-//        }).flatten
-//      } else {
-//        ~"Sort by name lexographically"
-//        attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-//      }
-//    }
-//  }
-
   lazy val metadataOrderedPrefixes : Option[Seq[(XsdNCName, XsdAnyURI)]] =
     for{
       metadata <- optMetadata
@@ -152,40 +127,6 @@ case class XmlElement(
       // If no metadata, sort by prefix name
       prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
     }
-//  {
-//    log.block("orderedPrefixes") {
-//      +"Order prefixes by prefixOrder optMetadata (if defined) or sort lexographically name"
-//      if(optMetadata.isDefined && optMetadata.get.optPrefixesOrder.isDefined) {
-//        ~"Sort by optMetadata prefixOrder"
-//        optMetadata.get.optPrefixesOrder.get.map({
-//          prefix => prefixToNamespaceURIMap.get(prefix).map { uri => (prefix,uri) }
-//        }).flatten
-//      } else {
-//        ~"Sort by name lexographically"
-//        prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-//      }
-//    }
-//  }
 
   lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
-
-  def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) =
-    // Convert to Map[XsdNCName, Boolean] that is true if it matches namespaceURI and provide a default optValue false if prefix isn't mapped
-    prefixToNamespaceURIMap mapValues { _ == namespaceURI } getOrElse(prefix, false)
-
-//  {
-//    log.block("isValidPrefixForNamespaceURI", Seq("prefix" -> prefix, "namespaceURI" -> namespaceURI)) {
-//      +"TRUE if prefix is defined with the given namespaceURI otherwise FALSE"
-//      val optionNsURI = prefixToNamespaceURIMap.get(prefix)
-//      if(optionNsURI.isDefined) {
-//        optionNsURI.get == namespaceURI
-//      } else {
-//        false
-//      }
-//    }
-//  }
-
-  def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = namespaceURIToPrefixMap.get(namespaceURI).orNull
-
-  def getNamespaceURIForPrefix(prefix : XsdNCName) = prefixToNamespaceURIMap.get(prefix).orNull
 }

@@ -21,6 +21,56 @@
 */
 package org.gtri.util.scala
 
+import org.gtri.util.xsddatatypes._
+import org.gtri.util.xsddatatypes.XsdQName._
+import annotation.tailrec
+
 package object xmlbuilder {
   type DiagnosticLocator = Any
+
+  implicit class implicitXmlElementPrefixToNamespaceURIResolver(self: XmlElement) extends PrefixToNamespaceURIResolver {
+    def getNamespaceURIForPrefix(prefix : XsdNCName) = self.prefixToNamespaceURIMap.get(prefix).orNull
+  }
+
+  implicit class implicitXmlElementNamespaceURIToPrefixResolver(self: XmlElement) extends NamespaceURIToPrefixResolver {
+
+    def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) =
+      self.prefixToNamespaceURIMap mapValues { _ == namespaceURI } getOrElse(prefix, false)
+
+    def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = self.namespaceURIToPrefixMap.get(namespaceURI).orNull
+  }
+
+  implicit class implicitXmlElementStack(stack: Seq[XmlElement]) extends NamespaceURIToPrefixResolver {
+    def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI)
+
+    def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) : XsdNCName = doGetPrefixForNamespaceURI(stack, namespaceURI)
+
+    @tailrec
+    private def doIsValidPrefixForNamespaceURI(stack : Seq[XmlElement], prefix: XsdNCName, namespaceURI: XsdAnyURI) : Boolean = {
+      if(stack.isEmpty) {
+        false
+      } else {
+        val head :: tail = stack
+        if(head.isValidPrefixForNamespaceURI(prefix, namespaceURI)) {
+          true
+        } else {
+          doIsValidPrefixForNamespaceURI(tail, prefix, namespaceURI)
+        }
+      }
+    }
+
+    @tailrec
+    private def doGetPrefixForNamespaceURI(stack : Seq[XmlElement], namespaceURI: XsdAnyURI) : XsdNCName = {
+      stack match {
+        case Nil => null
+        case head :: tail =>
+          val result = head.getPrefixForNamespaceURI(namespaceURI)
+          if(result != null) {
+            result
+          } else {
+            doGetPrefixForNamespaceURI(tail, namespaceURI)
+          }
+      }
+    }
+  }
 }

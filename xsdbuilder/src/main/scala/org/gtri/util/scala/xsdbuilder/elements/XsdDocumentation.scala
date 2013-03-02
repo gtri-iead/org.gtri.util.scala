@@ -17,27 +17,13 @@ final case class XsdDocumentation(
 
   def util = XsdDocumentation.util
 
-  def getAttributeValue(qName: XsdQName) = {
-    qName.getLocalName match {
-      case ATTRIBUTES.SOURCE.LOCALNAME => optSource
-      case ATTRIBUTES.XML_LANG.LOCALNAME => optXmlLang
-      case ATTRIBUTES.VALUE.LOCALNAME => optValue
-    }
+  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+    {
+      optSource.map { (ATTRIBUTES.SOURCE.QNAME -> _.toString) } ::
+      optXmlLang.map { (ATTRIBUTES.FINALDEFAULT.QNAME -> _.toString )} ::
+      Nil
+    }.flatten.toMap
   }
-
-//  def toAttributes = {
-//    optSource.map({ source => (XsdConstants.ATTRIBUTES.SOURCE.QNAME,source.toString)}).toList :::
-//    optXmlLang.map({ xmlLang => (XsdConstants.ATTRIBUTES.XML_LANG.QNAME,xmlLang.toString)}).toList
-//  }
-
-//  def pushTo(contract: XsdContract) {
-//    contract.addXsdDocumentation(
-//      /* XsdAnyURI _source => */optSource.orNull,
-//      /* XsdToken _xml_lang => */optXmlLang.orNull,
-//      /* String _value => */value.orNull,
-//      /* ImmutableMap<XsdNCName, XsdAnyURI> _prefixToNamespaceURIMap  => */prefixToNamespaceURIMap
-//    )
-//  }
 }
 
 object XsdDocumentation {
@@ -45,7 +31,7 @@ object XsdDocumentation {
 
     def qName = XsdConstants.ELEMENTS.DOCUMENTATION.QNAME
 
-    def parser[EE >: XsdDocumentation] : Parser[XmlElement,EE] = {
+    def parser[EE >: XsdDocumentation](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement,EE] = {
       for {
         element <- Parser.tell[XmlElement]
         optSource <- optionalAttributeParser(ATTRIBUTES.SOURCE.QNAME, Try.parser(XsdAnyURI.parseString))
@@ -59,18 +45,13 @@ object XsdDocumentation {
           )
     }
 
-    def attributes = Seq(
+    def attributes = Set(
       ATTRIBUTES.SOURCE.QNAME,
       ATTRIBUTES.XML_LANG.QNAME,
       ATTRIBUTES.VALUE.QNAME
     )
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq.empty
-
-//    def downcast(element: XsdElement) : Option[XsdDocumentation] = element match {
-//      case e : XsdDocumentation => Some(e)
-//      case _ => None
-//    }
 
   }
 

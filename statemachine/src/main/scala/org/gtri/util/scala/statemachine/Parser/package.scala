@@ -14,9 +14,6 @@ package object Parser {
 
   type State[A] = StateMachine.State.Done[Unit,Unit,A]
   object State {
-    // Still need the type here for match statement
-    type Continuation[A] = StateMachine.State.Continuation[Unit,Unit,A]
-
     type Success[A] = StateMachine.State.Success[Unit,Unit,A]
     val Success = StateMachine.State.Success
 

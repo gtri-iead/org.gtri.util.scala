@@ -8,7 +8,7 @@ case class XsdAllOrNone[A](value : Either[AllOrNoneCode, Set[A]]) {
   override def toString = {
     value fold(
       fa = { allOrNoneCode => allOrNoneCode.toString },
-      fb = { set => set.mkString(",")}
+      fb = { set => set.mkString(" ")}
     )
   }
 }

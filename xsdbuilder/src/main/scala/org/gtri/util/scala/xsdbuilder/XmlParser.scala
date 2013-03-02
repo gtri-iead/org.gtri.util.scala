@@ -83,7 +83,7 @@ object XmlParser {
       }
     ).getOrElse(
       key = attrQName,
-      default = buildHalt("Missing required attribute " + attrQName)
+      default = Succeed(None)
     )
   }
 

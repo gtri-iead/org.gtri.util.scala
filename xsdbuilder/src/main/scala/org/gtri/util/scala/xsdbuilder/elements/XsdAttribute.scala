@@ -3,8 +3,9 @@ package org.gtri.util.scala.xsdbuilder.elements
 import org.gtri.util.scala.statemachine._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdConstants._
-import org.gtri.util.scala.xsdbuilder.XmlParser._
 import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xsdbuilder.XmlParser._
+import org.gtri.util.scala.xsdbuilder.elements.XsdGenVal._
 
 final case class XsdAttribute(
   optId        :   Option[XsdId]                 = None,
@@ -21,18 +22,16 @@ final case class XsdAttribute(
 
   def util = XsdAttribute.util
 
-  def getAttributeValue(qName: XsdQName) = {
-    qName.getLocalName match {
-      case ATTRIBUTES.ID.LOCALNAME => optId
-      case ATTRIBUTES.NAME.LOCALNAME => Some(name)
-      case ATTRIBUTES.TYPE.LOCALNAME => Some(_type)
-      case ATTRIBUTES.DEFAULT.LOCALNAME => optDefault
-      case ATTRIBUTES.FIXED.LOCALNAME => optFixed
-    }
+  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+    {
+      optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
+      Some(ATTRIBUTES.NAME.QNAME -> name.toString) ::
+      Some(ATTRIBUTES.TYPE.QNAME -> _type.toString) ::
+      optDefault.map { (ATTRIBUTES.DEFAULT.QNAME -> _ )} ::
+      optFixed.map { (ATTRIBUTES.FIXED.QNAME -> _ )} ::
+        Nil
+    }.flatten.toMap
   }
-//  def toAttributes = {
-//    optId.map({ id => (ATTRIBUTES.SOURCE.QNAME,id.toString)}).toList
-//  }
 }
 
 object XsdAttribute {
@@ -41,10 +40,8 @@ object XsdAttribute {
 
     def qName = ELEMENTS.ANNOTATION.QNAME
 
-    def randomString = java.lang.Long.toHexString(java.lang.Double.doubleToLongBits(java.lang.Math.random()))
-    def genRandomName = new XsdName(new StringBuilder().append("AttributeGeneratedName").append(randomString).append(randomString).toString())
 
-    def parser[EE >: XsdAttribute] : Parser[XmlElement, EE] = {
+    def parser[EE >: XsdAttribute](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement, EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))
@@ -65,7 +62,7 @@ object XsdAttribute {
       }
     }
 
-    def attributes = Seq(
+    def attributes = Set(
       ATTRIBUTES.ID.QNAME,
       ATTRIBUTES.NAME.QNAME,
       ATTRIBUTES.TYPE.QNAME,
@@ -73,7 +70,7 @@ object XsdAttribute {
       ATTRIBUTES.FIXED.QNAME
     )
 
-    def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq(XsdDocumentation.util, XsdAppInfo.util)
+    def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = Seq(XsdAppInfo.util)
 
     //    def downcast(element: XsdElement) : Option[XsdAttribute] = element match {
     //      case e : XsdAttribute => Some(e)
