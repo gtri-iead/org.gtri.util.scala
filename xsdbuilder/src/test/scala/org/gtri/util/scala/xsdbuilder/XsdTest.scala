@@ -36,17 +36,18 @@ class XsdTest extends FeatureSpec with GivenWhenThen {
   feature("Callers can connect an XsdReader to an XsdWriter to form a plan that will read and write an XML File") {
     scenario("std") {
       Given("An an XsdReader and XsdWriter composed into a Plan")
-//      XsdTest.listPath(new File("."))
-      val xmlReader = XmlReader(new FileInputStream("src/test/resources/test.xml"),1)
-      val xmlWriter = XmlWriter(new FileOutputStream("target/test.xml"))
+      val f1 = new FileInputStream("src/test/resources/test.xml")
+      val f2 = new FileOutputStream("target/test.xml")
 //      val plan = xmlReader compose dumpStream("xmlReader") compose XmlToXsdParser() compose dumpStream("xmlToXsdParser") compose XsdToXmlGenerator() compose dumpStream("xsdToXmlGenerator") compose xmlWriter
-      val plan = xmlReader compose XmlToXsdParser() compose XsdToXmlGenerator() compose xmlWriter
+      val plan = XmlReader(f1) compose dumpStream("xmlReader") compose XmlToXsdParser() compose XsdToXmlGenerator() compose XmlWriter(f2)
       When("that plan is run")
       var result = plan.s0.step()
       while(result.state.isContinuation) {
         println(result.metadata)
         result = result.state.step()
       }
+      f1.close()
+      f2.close()
 //      val result = plan.run()
       Then("the result should be a success")
       println("result="+result)
@@ -59,7 +60,7 @@ class XsdTest extends FeatureSpec with GivenWhenThen {
 
 object XsdTest {
   def dumpStream[A](name: String) = Translator.collectTee[A] {
-    case Chunk(events) => println(name+"="+events)
+    case Chunk(events) => events.map(e => println(name+"="+e))
     case EndOfInput => println(name+"="+EndOfInput)
   }
 

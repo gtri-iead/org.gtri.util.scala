@@ -3,9 +3,10 @@ package org.gtri.util.scala.xsdbuilder.elements
 import org.gtri.util.scala.statemachine._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdConstants._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 import org.gtri.util.scala.xsdbuilder.XmlParser._
 import org.gtri.util.scala.xsdbuilder.elements.XsdGenVal._
+import org.gtri.util.xsddatatypes.XsdQName.PrefixToNamespaceURIResolver
 
 final case class XsdAttribute(
   optId        :   Option[XsdId]                 = None,
@@ -16,17 +17,15 @@ final case class XsdAttribute(
   optMetadata  :   Option[XsdElement.Metadata]   = None
 ) extends XsdElement {
 
-  def qName = XsdAttribute.util.qName
-
   def optValue = None
 
   def util = XsdAttribute.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) = {
     {
       optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
       Some(ATTRIBUTES.NAME.QNAME -> name.toString) ::
-      Some(ATTRIBUTES.TYPE.QNAME -> _type.toString) ::
+      Some(ATTRIBUTES.TYPE.QNAME -> _type.toStringWithPrefix(context)) ::
       optDefault.map { (ATTRIBUTES.DEFAULT.QNAME -> _ )} ::
       optFixed.map { (ATTRIBUTES.FIXED.QNAME -> _ )} ::
         Nil
@@ -41,13 +40,13 @@ object XsdAttribute {
     def qName = ELEMENTS.ANNOTATION.QNAME
 
 
-    def parser[EE >: XsdAttribute](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement, EE] = {
+    def parser[EE >: XsdAttribute](context: Seq[XmlNamespaceContext]) : Parser[XmlElement, EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))
         name <- requiredAttributeParser[XsdName](ATTRIBUTES.NAME.QNAME, Try.parser(XsdName.parseString), Some(() => genRandomName))
         // TODO: how to resolve qname prefix properly?
-        _type <- requiredAttributeParser(ATTRIBUTES.TYPE.QNAME, Try.parser((s:String) => XsdQName.parseStringWithPrefix(s,element)),Some(() => XsdConstants.BUILTIN_DATATYPES.STRING.QNAME))
+        _type <- requiredAttributeParser(ATTRIBUTES.TYPE.QNAME, Try.parser((s:String) => XsdQName.parseStringWithPrefix(s,context)),Some(() => XsdConstants.BUILTIN_DATATYPES.STRING.QNAME))
         optDefault <- optionalAttributeParser(ATTRIBUTES.DEFAULT.QNAME, Parser.tell[String])
         optFixed <- optionalAttributeParser(ATTRIBUTES.FIXED.QNAME, Parser.tell[String])
       } yield {

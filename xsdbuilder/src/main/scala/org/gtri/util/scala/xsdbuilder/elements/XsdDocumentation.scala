@@ -4,7 +4,7 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 
 final case class XsdDocumentation(
     optSource    :   Option[XsdAnyURI]             = None,
@@ -13,11 +13,9 @@ final case class XsdDocumentation(
     optMetadata  :   Option[XsdElement.Metadata]   = None
   ) extends XsdElement {
 
-  def qName = XsdDocumentation.util.qName
-
   def util = XsdDocumentation.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) = {
     {
       optSource.map { (ATTRIBUTES.SOURCE.QNAME -> _.toString) } ::
       optXmlLang.map { (ATTRIBUTES.FINALDEFAULT.QNAME -> _.toString )} ::
@@ -31,7 +29,7 @@ object XsdDocumentation {
 
     def qName = XsdConstants.ELEMENTS.DOCUMENTATION.QNAME
 
-    def parser[EE >: XsdDocumentation](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement,EE] = {
+    def parser[EE >: XsdDocumentation](context: Seq[XmlNamespaceContext]) : Parser[XmlElement,EE] = {
       for {
         element <- Parser.tell[XmlElement]
         optSource <- optionalAttributeParser(ATTRIBUTES.SOURCE.QNAME, Try.parser(XsdAnyURI.parseString))

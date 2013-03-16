@@ -28,43 +28,54 @@ import annotation.tailrec
 package object xmlbuilder {
   type DiagnosticLocator = Any
 
-  implicit class implicitXmlElementPrefixToNamespaceURIResolver(self: XmlElement) extends PrefixToNamespaceURIResolver {
-    def getNamespaceURIForPrefix(prefix : XsdNCName) = self.prefixToNamespaceURIMap.get(prefix).orNull
+  implicit class implicitXmlElementStackPrefixToNamespaceURIResolver(stack: Seq[PrefixToNamespaceURIResolver]) extends PrefixToNamespaceURIResolver {
+
+    // Note: rejected this b/c it calls getNamespaceURIForPrefix twice
+//    def getNamespaceURIForPrefix(prefix: XsdNCName) = stack.find(_.getNamespaceURIForPrefix(prefix) != null).map(_.getNamespaceURIForPrefix(prefix)).orNull
+    def getNamespaceURIForPrefix(prefix: XsdNCName) = doGetNamespaceURIForPrefix(stack, prefix)
+
+    @tailrec
+    private def doGetNamespaceURIForPrefix(stack: Seq[PrefixToNamespaceURIResolver], prefix: XsdNCName) : XsdAnyURI = {
+      stack match {
+        case Nil => null
+        case head :: tail =>
+          val result = head.getNamespaceURIForPrefix(prefix)
+          // Note: Have to use if/else to get tailrec to work here
+          if(result != null) {
+            result
+          } else {
+            doGetNamespaceURIForPrefix(tail, prefix)
+          }
+      }
+    }
   }
 
-  implicit class implicitXmlElementNamespaceURIToPrefixResolver(self: XmlElement) extends NamespaceURIToPrefixResolver {
-
-    def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) =
-      self.prefixToNamespaceURIMap mapValues { _ == namespaceURI } getOrElse(prefix, false)
-
-    def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) = self.namespaceURIToPrefixMap.get(namespaceURI).orNull
-  }
-
-  implicit class implicitXmlElementStack(stack: Seq[XmlElement]) extends NamespaceURIToPrefixResolver {
+  implicit class implicitXmlElementStackNamespaceURIToPrefixResolver(stack: Seq[NamespaceURIToPrefixResolver]) extends NamespaceURIToPrefixResolver {
     def isValidPrefixForNamespaceURI(prefix: XsdNCName, namespaceURI: XsdAnyURI) = doIsValidPrefixForNamespaceURI(stack, prefix, namespaceURI)
 
     def getPrefixForNamespaceURI(namespaceURI: XsdAnyURI) : XsdNCName = doGetPrefixForNamespaceURI(stack, namespaceURI)
 
     @tailrec
-    private def doIsValidPrefixForNamespaceURI(stack : Seq[XmlElement], prefix: XsdNCName, namespaceURI: XsdAnyURI) : Boolean = {
-      if(stack.isEmpty) {
-        false
-      } else {
-        val head :: tail = stack
-        if(head.isValidPrefixForNamespaceURI(prefix, namespaceURI)) {
-          true
-        } else {
-          doIsValidPrefixForNamespaceURI(tail, prefix, namespaceURI)
-        }
+    private def doIsValidPrefixForNamespaceURI(stack : Seq[NamespaceURIToPrefixResolver], prefix: XsdNCName, namespaceURI: XsdAnyURI) : Boolean = {
+      stack match {
+        case Nil => false
+        case head :: tail =>
+          // Note: Have to use if/else to get tailrec to work here
+          if(head.isValidPrefixForNamespaceURI(prefix, namespaceURI)) {
+            true
+          } else {
+            doIsValidPrefixForNamespaceURI(tail, prefix, namespaceURI)
+          }
       }
     }
 
     @tailrec
-    private def doGetPrefixForNamespaceURI(stack : Seq[XmlElement], namespaceURI: XsdAnyURI) : XsdNCName = {
+    private def doGetPrefixForNamespaceURI(stack : Seq[NamespaceURIToPrefixResolver], namespaceURI: XsdAnyURI) : XsdNCName = {
       stack match {
         case Nil => null
         case head :: tail =>
           val result = head.getPrefixForNamespaceURI(namespaceURI)
+          // Note: Have to use if/else to get tailrec to work here
           if(result != null) {
             result
           } else {

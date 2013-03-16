@@ -53,7 +53,8 @@ object XmlParser {
       val t0 = simpleTypeParser(attrStrValue)
       t0.state match {
         case q : State.Success[U] => Succeed(q.value,t0.metadata)
-        case q : State.Halted[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'")
+          // TODO: better error message here
+        case q : State.Halted[U] => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'. " + q.toString)
       }
     }
     ).getOrElse(
@@ -104,7 +105,7 @@ object XmlParser {
 //      }
 //    }
 //
-//    element.attributesMap.mapValues(attrStrValue =>
+//    element.toAttributesMap.mapValues(attrStrValue =>
 //      simpleTypeParser(attrStrValue) match {
 //        case Right(value) => Succeed(value)
 //        case Left(exception) => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'", Some(exception))
@@ -127,7 +128,7 @@ object XmlParser {
 //      Halt.error(message,cause,recoverF)
 //    }
 //
-//    element.attributesMap.mapValues[Transition[Option[U]]](attrStrValue =>
+//    element.toAttributesMap.mapValues[Transition[Option[U]]](attrStrValue =>
 //      simpleTypeParser(attrStrValue) match {
 //        case Right(value) => Succeed(Some(value))
 //        case Left(exception) => buildHalt("Invalid attribute value " + attrQName + "='" + attrStrValue + "'",Some(exception))

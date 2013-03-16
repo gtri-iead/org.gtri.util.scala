@@ -31,7 +31,7 @@ import annotation.tailrec
 import scala.collection.immutable.Seq
 
 
-case class XmlReader(
+final case class XmlReader(
   in              :   InputStream,
   chunkSize       :   Int               = Enumerator.STD_CHUNK_SIZE
 ) extends Enumerator[XmlEvent] {
@@ -43,7 +43,7 @@ case class XmlReader(
 
   def s0() = XmlReaderCont()
 
-  case class XmlReaderCont() extends State.Continuation[XmlEvent] {
+  final case class XmlReaderCont() extends State.Continuation[XmlEvent] {
 
     def apply(x : Unit) = {
       try {

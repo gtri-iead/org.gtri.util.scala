@@ -21,7 +21,7 @@
 */
 package org.gtri.util.scala.xmlbuilder
 
-case class XmlFileLocator(
+final case class XmlFileLocator(
   charOffset    :   Int,
   columnNumber  :   Int,
   lineNumber    :   Int,

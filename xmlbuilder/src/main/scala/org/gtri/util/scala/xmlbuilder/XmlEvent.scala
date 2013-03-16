@@ -27,7 +27,7 @@ sealed trait XmlEvent {
   def locator : DiagnosticLocator
 }
 
-case class StartXmlDocumentEvent(
+final case class StartXmlDocumentEvent(
   encoding                  :   String,
   version                   :   String,
   isStandAlone              :   Boolean,
@@ -35,26 +35,26 @@ case class StartXmlDocumentEvent(
   locator                   :   DiagnosticLocator
 ) extends XmlEvent
 
-case class EndXmlDocumentEvent(
+final case class EndXmlDocumentEvent(
   locator                   :   DiagnosticLocator
 ) extends XmlEvent
 
-case class StartXmlElementEvent(
+final case class StartXmlElementEvent(
   element                   :   XmlElement,
   locator                   :   DiagnosticLocator
 ) extends XmlEvent
 
-case class EndXmlElementEvent(
+final case class EndXmlElementEvent(
   qName                     :   XsdQName,
   locator                   :   DiagnosticLocator
 ) extends XmlEvent
 
-case class AddXmlCommentEvent(
+final case class AddXmlCommentEvent(
   comment                   :   String,
   locator                   :   DiagnosticLocator
 ) extends XmlEvent
 
-case class AddXmlTextEvent(
+final case class AddXmlTextEvent(
   text                      :   String,
   locator                   :   DiagnosticLocator
 ) extends XmlEvent

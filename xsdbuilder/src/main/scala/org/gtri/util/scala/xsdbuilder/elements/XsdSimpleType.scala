@@ -5,7 +5,7 @@ import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdCodes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 import org.gtri.util.scala.xsdbuilder.XsdAllOrNone
 import org.gtri.util.scala.xsdbuilder.elements.XsdGenVal._
 
@@ -16,13 +16,11 @@ case class XsdSimpleType(
   optMetadata      :   Option[XsdElement.Metadata]                               = None
 ) extends XsdElement {
 
-  def qName = XsdSimpleType.util.qName
-
   def optValue = None
 
-  def util = XsdAnnotation.util
+  def util = XsdSimpleType.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) = {
     {
       optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
       Some(ATTRIBUTES.NAME.QNAME -> name.toString) ::
@@ -37,7 +35,7 @@ object XsdSimpleType {
   implicit object util extends XsdElementUtil[XsdSimpleType] {
     def qName = ELEMENTS.SIMPLETYPE.QNAME
 
-    def parser[EE >: XsdSimpleType](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement,EE] = {
+    def parser[EE >: XsdSimpleType](context: Seq[XmlNamespaceContext]) : Parser[XmlElement,EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))
@@ -59,7 +57,10 @@ object XsdSimpleType {
     )
 
     def allowedChildElements(children: Seq[XsdElementUtil[XsdElement]]) = {
-      Seq(XsdAnnotation.util)
+      Seq(
+        XsdAnnotation.util,
+        XsdSimpleTypeRestriction.util
+      )
     }
 
   }

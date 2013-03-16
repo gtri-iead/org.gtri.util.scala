@@ -70,11 +70,13 @@ case class XsdToXmlGenerator() extends Translator[XsdEvent, XmlEvent]{
    * @param util
    * @return
    */
-  def createStartEventGenerator(next: => Generator, util : XsdElementUtil[XsdElement]) : PartialGenerator = {
-    case ev@StartXsdEvent(item, locator) if item.qName == util.qName =>
+  def createStartEventGenerator(stack: List[XmlElement], next: List[XmlElement] => Generator, util : XsdElementUtil[XsdElement]) : PartialGenerator = {
+    case ev@StartXsdEvent(item, locator) if item.util.qName == util.qName =>
+      val element = item.toXmlElement(stack)
+      val newStack = element :: stack
       Continue(
-        state = next,
-        output = StartXmlElementEvent(item.toXmlElement, locator) :: Nil
+        state = next(newStack),
+        output = StartXmlElementEvent(element, locator) :: Nil
       )
   }
 
@@ -85,7 +87,7 @@ case class XsdToXmlGenerator() extends Translator[XsdEvent, XmlEvent]{
    * @return
    */
   def createEndEventGenerator(next: => Generator, util : XsdElementUtil[XsdElement]) : PartialGenerator = {
-    case ev@EndXsdEvent(item, locator) if item.qName == util.qName =>
+    case ev@EndXsdEvent(item, locator) if item.util.qName == util.qName =>
       Continue(
         state = next,
         output = EndXmlElementEvent(util.qName, locator) :: Nil
@@ -140,7 +142,7 @@ case class XsdToXmlGenerator() extends Translator[XsdEvent, XmlEvent]{
   case class DocRootGenerator(parent : Generator) extends Generator {
     
     private val doApply = (
-        createStartEventGenerator(ElementGenerator(XsdSchema.util,this), XsdSchema.util)
+        createStartEventGenerator(Nil, stack => ElementGenerator(stack,XsdSchema.util,this), XsdSchema.util)
         orElse parseEndDocumentEvent(parent)
         orElse genLexicalEvents(this)
         orElse guardUnexpectedXsdEvent(this)
@@ -156,15 +158,16 @@ case class XsdToXmlGenerator() extends Translator[XsdEvent, XmlEvent]{
    * @param util
    * @param parent
    */
-  case class ElementGenerator(util : XsdElementUtil[XsdElement], parent: Generator) extends Generator {
+  case class ElementGenerator(stack: List[XmlElement], util : XsdElementUtil[XsdElement], parent: Generator) extends Generator {
     val doApply : PartialGenerator = {
       val endEventGenerator = createEndEventGenerator(parent,util)
       val childGenerators =
         util.allowedChildElements(Seq.empty).foldLeft(endEventGenerator)
         { (z,childUtil) =>
           z orElse createStartEventGenerator(
-            ElementGenerator(childUtil, this),
-            childUtil
+            stack=stack,
+            next=newStack => ElementGenerator(newStack,childUtil, this),
+            util=childUtil
           )
         }
       (

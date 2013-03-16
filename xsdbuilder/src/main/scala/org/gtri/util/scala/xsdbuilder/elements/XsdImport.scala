@@ -4,7 +4,7 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 
 final case class XsdImport(
   optId              :   Option[XsdId]                 = None,
@@ -13,13 +13,11 @@ final case class XsdImport(
   optMetadata        :   Option[XsdElement.Metadata]   = None
 ) extends XsdElement {
 
-  def qName = XsdImport.util.qName
-
   def optValue = None
 
   def util = XsdImport.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) = {
     {
       optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
       optNamespace.map { (ATTRIBUTES.NAMESPACE.QNAME -> _.toString )} ::
@@ -35,7 +33,7 @@ object XsdImport {
 
     def qName = ELEMENTS.IMPORT.QNAME
 
-    def parser[EE >: XsdImport](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement, EE] = {
+    def parser[EE >: XsdImport](context: Seq[XmlNamespaceContext]) : Parser[XmlElement, EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))

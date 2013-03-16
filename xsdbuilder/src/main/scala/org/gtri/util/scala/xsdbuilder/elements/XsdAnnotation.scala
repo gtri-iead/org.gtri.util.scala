@@ -4,20 +4,18 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 
 final case class XsdAnnotation(
   optId        :   Option[XsdId]                 = None,
   optMetadata  :   Option[XsdElement.Metadata]   = None
 ) extends XsdElement {
 
-  def qName = XsdAnnotation.util.qName
-
   def optValue = None
 
   def util = XsdAnnotation.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) = {
     {
       optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
       Nil
@@ -31,7 +29,7 @@ object XsdAnnotation {
 
     def qName = ELEMENTS.ANNOTATION.QNAME
 
-    def parser[EE >: XsdAnnotation](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement, EE] = {
+    def parser[EE >: XsdAnnotation](context: Seq[XmlNamespaceContext]) : Parser[XmlElement, EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))

@@ -1,42 +1,22 @@
 package org.gtri.util.scala.xsdbuilder.elements
 
-import org.gtri.util.scala.xmlbuilder.XmlElement
-import org.gtri.util.xsddatatypes.XsdConstants._
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 import org.gtri.util.xsddatatypes.{XsdQName, XsdAnyURI, XsdNCName}
 
-trait XsdElement {
-  def   util           :   XsdElementUtil[_]
-  def   qName          :   XsdQName
-  def   optValue       :   Option[String]
-  def   optMetadata    :   Option[XsdElement.Metadata]
+trait XsdElement  {
+  def util           :   XsdElementUtil[_]
+  def optValue       :   Option[String]
+  def optMetadata    :   Option[XsdElement.Metadata]
 
-  def prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI] = {
-    val o =
-      for {
-        metadata <- optMetadata
-        prefixToNamespaceURIMap <- metadata.optPrefixToNamespaceURIMap
-      } yield prefixToNamespaceURIMap
-    o.getOrElse(Map.empty)
-  }
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) : Map[XsdQName,String]
 
-//  lazy val attributes : Seq[(XsdQName,String)] = {
-//    for {
-//      key <- util.attributes.toSeq
-//      value <- attribute(key)
-//    } yield (key,value)
-//  }
-
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) : Map[XsdQName,String]
-
-  def toXmlElement(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = XmlElement(
-      qName                     =   qName,
+  def toXmlElement(context: Seq[XmlNamespaceContext]) = XmlElement(
+      qName                     =   util.qName,
       optValue                  =   optValue,
-      attributesMap             =   attributesMap(namespaceURIToPrefixResolver),
-      prefixToNamespaceURIMap   =   prefixToNamespaceURIMap,
-      optMetadata               =   optMetadata map { _.toXmlElementMetadata }
+      attributesMap             =   toAttributesMap(optMetadata.map(_ +: context).getOrElse(context)),
+      prefixToNamespaceURIMap   =   optMetadata.map(_.prefixToNamespaceURIMap).getOrElse(Map.empty),
+      optMetadata               =   optMetadata.map(_.toXmlElementMetadata)
     )
-
-//  def attribute(qName : XsdQName) : Option[String]
 }
 
 object XsdElement {
@@ -45,7 +25,9 @@ object XsdElement {
     optPrefixesOrder              :   Option[Seq[XsdNCName]]              = None,
     optPrefixToNamespaceURIMap    :   Option[Map[XsdNCName, XsdAnyURI]]   = None,
     optLocator                    :   Option[Any]                         = None
-  ) {
+  ) extends XmlNamespaceContext {
+    lazy val prefixToNamespaceURIMap : Map[XsdNCName, XsdAnyURI] = optPrefixToNamespaceURIMap.getOrElse(Map.empty)
+
     def toXmlElementMetadata = XmlElement.Metadata(
         optAttributesOrder  =   optAttributesOrder,
         optPrefixesOrder    =   optPrefixesOrder,

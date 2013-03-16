@@ -15,5 +15,7 @@
         <xs:documentation>asdf</xs:documentation>
     </xs:annotation>
     <xs:import namespace="http://testy.test2.test2" schemaLocation=".../somewhere"/>
-    <xs:simpleType final="#all" name="name"/>
+        <xs:simpleType name="DressSizeType">
+            <xs:restriction base="DressSizeType"/>
+        </xs:simpleType>
 </xs:schema>

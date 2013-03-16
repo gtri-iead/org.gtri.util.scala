@@ -22,7 +22,6 @@
 package org.gtri.util.scala.xmlbuilder
 
 import org.gtri.util.xsddatatypes._
-import org.gtri.util.xsddatatypes.XsdQName._
 import org.gtri.util.scala.xmlbuilder.XmlElement.Metadata
 
 
@@ -90,15 +89,17 @@ object XmlElement {
     ))
   )
 }
-case class XmlElement(
+final case class XmlElement(
   qName                     :  XsdQName,
   optValue                  :  Option[String]                  = None,
   attributesMap             :  Map[XsdQName, String]           = Map.empty,
   prefixToNamespaceURIMap   :  Map[XsdNCName, XsdAnyURI]       = Map.empty,
-  optMetadata                  :  Option[Metadata]             = None
-) {
+  optMetadata               :  Option[Metadata]                = None
+) extends XmlNamespaceContext {
 
-  lazy val metadataOrderedAttributes : Option[Seq[(XsdQName,String)]] =
+  def optPrefixesOrder = optMetadata flatMap(_.optPrefixesOrder)
+
+  private def optOrderedAttributesTuples : Option[Seq[(XsdQName,String)]] =
     for{
       metadata <- optMetadata
       attributesOrder <- metadata.optAttributesOrder
@@ -107,26 +108,6 @@ case class XmlElement(
       value <- attributesMap.get(qName)
     } yield (qName, value)
 
-  lazy val orderedAttributes : Seq[(XsdQName, String)] =
-    metadataOrderedAttributes getOrElse {
-      // If no metadata then sort by attribute name
-      attributesMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-    }
-
-  lazy val metadataOrderedPrefixes : Option[Seq[(XsdNCName, XsdAnyURI)]] =
-    for{
-      metadata <- optMetadata
-      prefixesOrder <- metadata.optPrefixesOrder
-    } yield for {
-      prefix <- prefixesOrder
-      uri <- prefixToNamespaceURIMap.get(prefix)
-    } yield (prefix,uri)
-
-  lazy val orderedPrefixes : Seq[(XsdNCName, XsdAnyURI)] =
-    metadataOrderedPrefixes getOrElse {
-      // If no metadata, sort by prefix name
-      prefixToNamespaceURIMap.toSeq.sortWith { (t1,t2) => t1._1.toString < t2._1.toString }
-    }
-
-  lazy val namespaceURIToPrefixMap = prefixToNamespaceURIMap.map(_.swap)
+  // If no metadata then sort by attribute name
+  lazy val orderedAttributes : Seq[(XsdQName, String)] = optOrderedAttributesTuples.getOrElse(attributesMap.toSeq.sortBy(_._1))
 }

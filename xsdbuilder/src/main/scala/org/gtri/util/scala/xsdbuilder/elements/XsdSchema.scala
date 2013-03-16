@@ -5,7 +5,7 @@ import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdCodes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 import org.gtri.util.scala.xsdbuilder.XsdAllOrNone
 import org.gtri.util.scala.xsdbuilder.elements.XsdGenVal._
 
@@ -21,12 +21,11 @@ case class XsdSchema(
   optMetadata               :   Option[XsdElement.Metadata]           = None
 ) extends XsdElement {
 
-  def   qName      =   XsdSchema.util.qName
   def   optValue   =   None
 
   def util = XsdSchema.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context : Seq[XmlNamespaceContext]) = {
     {
       optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
       Some(ATTRIBUTES.TARGETNAMESPACE.QNAME -> targetNamespace.toString) ::
@@ -47,7 +46,7 @@ object XsdSchema {
 
     def qName = ELEMENTS.SCHEMA.QNAME
 
-    def parser[EE >: XsdSchema](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement,EE] =
+    def parser[EE >: XsdSchema](context: Seq[XmlNamespaceContext]) : Parser[XmlElement,EE] =
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))

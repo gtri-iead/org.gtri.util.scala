@@ -4,7 +4,7 @@ import org.gtri.util.scala.statemachine._
 import org.gtri.util.xsddatatypes._
 import org.gtri.util.xsddatatypes.XsdConstants._
 import org.gtri.util.scala.xsdbuilder.XmlParser._
-import org.gtri.util.scala.xmlbuilder.XmlElement
+import org.gtri.util.scala.xmlbuilder.{XmlNamespaceContext, XmlElement}
 
 final case class XsdSimpleTypeRestriction(
   optId        :   Option[XsdId]                 = None,
@@ -12,16 +12,14 @@ final case class XsdSimpleTypeRestriction(
   optMetadata  :   Option[XsdElement.Metadata]   = None
 ) extends XsdElement {
 
-  def qName = XsdSimpleTypeRestriction.util.qName
-
   def optValue = None
 
   def util = XsdSimpleTypeRestriction.util
 
-  def attributesMap(namespaceURIToPrefixResolver : XsdQName.NamespaceURIToPrefixResolver) = {
+  def toAttributesMap(context: Seq[XmlNamespaceContext]) = {
     {
       optId.map { (ATTRIBUTES.ID.QNAME -> _.toString) } ::
-      (ATTRIBUTES.BASE.QNAME -> base.toString) ::
+      Some(ATTRIBUTES.BASE.QNAME -> base.toStringWithPrefix(context)) ::
       Nil
     }.flatten.toMap
   }
@@ -31,15 +29,17 @@ object XsdSimpleTypeRestriction {
 
   implicit object util extends XsdElementUtil[XsdSimpleTypeRestriction] {
 
-    def qName = ELEMENTS.ANNOTATION.QNAME
+    def qName = ELEMENTS.RESTRICTION.QNAME
 
-    def parser[EE >: XsdSimpleTypeRestriction](prefixToNamespaceURIResolver : XsdQName.PrefixToNamespaceURIResolver) : Parser[XmlElement, EE] = {
+    def parser[EE >: XsdSimpleTypeRestriction](context: Seq[XmlNamespaceContext]) : Parser[XmlElement, EE] = {
       for{
         element <- Parser.tell[XmlElement]
         optId <- optionalAttributeParser(ATTRIBUTES.ID.QNAME, Try.parser(XsdId.parseString))
+        base <- requiredAttributeParser(ATTRIBUTES.BASE.QNAME, Try.parser((s:String) => XsdQName.parseStringWithPrefix(s,context)), None)
       } yield {
           XsdSimpleTypeRestriction(
             optId = optId,
+            base = base,
             optMetadata = Some(XsdElement.Metadata(element))
           )
       }

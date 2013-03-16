@@ -112,14 +112,15 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param util
    * @return
    */
-  def createStartElementParser[E <: XsdElement](next: StartXsdEvent => ParserState, util : XsdElementUtil[E]) : PartialParser = {
+  def createStartElementParser[E <: XsdElement](stack: List[XmlElement], next: (List[XmlElement], StartXsdEvent) => ParserState, util : XsdElementUtil[E]) : PartialParser = {
     case ev@StartXmlElementEvent(element, locator) if element.qName == util.qName =>
-      val t0 = util.parser(element)
+      val newStack = element :: stack
+      val t0 = util.parser(newStack)(element)
 
       t0.toTransition.flatMap { e =>
         val event = StartXsdEvent(e,locator)
         Translator.Continue(
-          state = next(event),
+          state = next(newStack, event),
           output = event :: Nil
         )
       }
@@ -132,7 +133,7 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @return
    */
   def createEndEventParser(e : XsdElement, next: EndXsdEvent => ParserState) : PartialParser = {
-    case ev@EndXmlElementEvent(eventQName, locator) if eventQName == e.qName =>
+    case ev@EndXmlElementEvent(eventQName, locator) if eventQName == e.util.qName =>
       val endEvent = EndXsdEvent(e,locator)
       Continue(
         state = next(endEvent),
@@ -187,8 +188,10 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
   case class DocRootParser(parent : ParserState) extends ParserState {
     private val doApply = (
       createStartElementParser(
-        { event =>
+        Nil,
+        { (stack,event) =>
           ElementParser(
+            stack = stack,
             util = XsdSchema.util,
             parent = this,
             item = event.item
@@ -213,14 +216,16 @@ case class XmlToXsdParser() extends Translator[XmlEvent, XsdEvent]{
    * @param item
    * @param children
    */
-  case class ElementParser(util : XsdElementUtil[XsdElement], parent : ParserState, item : XsdElement, children : Seq[XsdElementUtil[XsdElement]] = Seq.empty) extends ParserState {
+  case class ElementParser(stack: List[XmlElement], util : XsdElementUtil[XsdElement], parent : ParserState, item : XsdElement, children : Seq[XsdElementUtil[XsdElement]] = Seq.empty) extends ParserState {
     val doApply : PartialParser = {
       val endEventParser = createEndEventParser(item, { _ => parent })
       val childParsers =
         util.allowedChildElements(children).foldLeft(endEventParser) { (z,childUtil) =>
           z orElse createStartElementParser(
-            { event =>
+            stack,
+            { (newStack,event) =>
               ElementParser(
+                stack=newStack,
                 util = childUtil,
                 parent = this,
                 item = event.item

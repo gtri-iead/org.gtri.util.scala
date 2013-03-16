@@ -29,7 +29,7 @@ import java.io.OutputStream
 import net.sf.saxon.s9api.Processor
 import net.sf.saxon.s9api.Serializer
 
-case class XmlWriter(out : OutputStream) extends Iteratee[XmlEvent, Unit] {
+final case class XmlWriter(out : OutputStream) extends Iteratee[XmlEvent, Unit] {
 
   // Build a writer using saxon to get nice pretty printing
   private val writer = {
@@ -46,7 +46,7 @@ case class XmlWriter(out : OutputStream) extends Iteratee[XmlEvent, Unit] {
 
   def s0 = XmlWriterCont(Nil)
 
-  case class XmlWriterCont(stack : List[XmlElement]) extends State.Continuation[XmlEvent, Unit] {
+  final case class XmlWriterCont(stack : List[XmlElement]) extends State.Continuation[XmlEvent, Unit] {
 
     def apply(xmlEvent: XmlEvent) = {
       try {
@@ -73,7 +73,7 @@ case class XmlWriter(out : OutputStream) extends Iteratee[XmlEvent, Unit] {
             val prefix = optionPrefix.getOrElse { XMLConstants.DEFAULT_NS_PREFIX }
             writer.writeStartElement(prefix, localName, nsURI)
 
-            for((namespacePrefix, namespaceURI) <- e.element.orderedPrefixes) {
+            for((namespacePrefix, namespaceURI) <- e.element.orderedPrefixToNamespaceURITuples) {
               // Skip the prefix for the element
               if(prefix != namespacePrefix.toString) {
                 val namespacePrefixString = namespacePrefix.toString

@@ -184,3 +184,8 @@ Mar 1
 #5: TODO: a function that can "parallel" compose Iteratees of the same type so that the input is applied to both Iteratees and the output is summed
 #6: Change flatMap/map for Iteratee into a concat method?
 #7: Add either flatMap/map or concat for Enumerators
+
+Mar 10
+
+#1: TODO: change Enumerable run return type to DoneTransition
+#2: TODO: Rename compose to connect

@@ -7,3 +7,17 @@ Goals:
 #3aa: Best that could be generically parsed would be a Map[XsdQName,Any] but would still require "parsing" by constructor to assign to specific fields
 #3ab: Also doesn't allow per type recovery defaults - a name
 #4: Convert XsdElement.toAttribute to generically build attribute list
+
+Mar 3
+
+#1: TODO: split XML conversion methods (toXmlElement, parser) away from element definitions to promote the reuse of elements definitions in contexts other than just XML parsing/generation
+#2: TODO: better error message for unbound prefix
+#3: TODO: better validation on child elements maybe using regex on qnames? maybe a model group validator?
+#3a: Currently, there is no validation error if a child element is required but missing
+#4: TODO: support for any XML content within appinfo
+
+Mar 4
+
+#1: TODO: Change toXmlElement to genXmlElement and change return type to Parser[XsdXXX,XmlElement] - toXmlElement could fail with no bound prefix for a qname (fixable)
+
+
